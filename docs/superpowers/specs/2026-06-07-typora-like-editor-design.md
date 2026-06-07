@@ -11,8 +11,7 @@ A desktop Markdown editor for Linux that provides a "What You See Is What You Me
 
 ## Core Features
 - **Live Preview:** Real-time rendering of Markdown as it is typed.
-- **File Management:** Sidebar for browsing local files and folders.
-- **Outline View:** Dynamic navigation of document headers.
+- **File Management & Outline View:** A dual-purpose sidebar where the user can toggle between a file explorer and an outline view of the current document.
 - **Themes:** Support for custom CSS themes.
 - **Syntax Highlighting:** Support for various programming languages in code fences.
 - **Math Support:** Integration with MathJax/KaTeX.
