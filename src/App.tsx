@@ -1,22 +1,11 @@
-import { useState } from 'react';
-import { parseMarkdown } from './lib/markdown';
+import { Editor } from './components/Editor';
 
 function App() {
-  const [content, setContent] = useState('# Hello World');
-
   return (
-    <div className="flex h-screen">
-      <textarea 
-        className="w-2/3 p-4 border-r"
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-      />
-      <div 
-        className="w-1/3 p-4"
-        dangerouslySetInnerHTML={{ __html: parseMarkdown(content) }}
-      />
+    <div className="h-screen">
+      <Editor />
     </div>
   );
 }
 
-export default App
+export default App;
