@@ -1,0 +1,24 @@
+{
+  "name": "typora-clone",
+  "version": "0.1.0",
+  "main": "index.html",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "typescript": "^5.0.0",
+    "markdown-it": "^13.0.0",
+    "lucide-react": "^0.263.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.3.0",
+    "postcss": "^8.4.0",
+    "autoprefixer": "^10.4.0",
+    "@tauri/cli": "^1.5.0"
+  }
+}
