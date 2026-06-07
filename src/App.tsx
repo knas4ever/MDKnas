@@ -1,12 +1,22 @@
-import React from 'react'
+import { useState } from 'react';
+import { parseMarkdown } from './lib/markdown';
 
 function App() {
+  const [content, setContent] = useState('# Hello World');
+
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
-      <h1 className="text-3xl font-bold p-8">Typora Clone</h1>
-      <p className="p-8">Welcome to your Markdown editor.</p>
+    <div className="flex h-screen">
+      <textarea 
+        className="w-2/3 p-4 border-r"
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+      />
+      <div 
+        className="w-1/3 p-4"
+        dangerouslySetInnerHTML={{ __html: parseMarkdown(content) }}
+      />
     </div>
-  )
+  );
 }
 
 export default App
