@@ -1,20 +1,26 @@
 /// <reference types="vite/client" />
 
 export interface Api {
-  fileRead: (path: string) => Promise<string>;
-  fileWrite: (path: string, content: string) => Promise<void>;
-  fileSaveAs: (content: string) => Promise<string>;
-  fileDelete: (path: string) => Promise<void>;
-  listFiles: (dir: string) => Promise<{ name: string; isDir: boolean }[]>;
+  openFolder: () => Promise<string | null>;
+  listFiles: (dir: string) => Promise<unknown[]>;
+  readFile: (p: string) => Promise<string>;
+  writeFile: (p: string, content: string) => Promise<void>;
+  createFile: (p: string, content?: string) => Promise<void>;
+  renameFile: (from: string, to: string) => Promise<void>;
+  deleteFile: (p: string) => Promise<void>;
+  watchDir: (dir: string) => Promise<void>;
+  onWatch: (cb: (event: string, filename: string) => void) => () => void;
+  onOpenFile: (cb: (path: string) => void) => () => void;
+  loadSettings: () => Promise<unknown>;
+  saveSettings: (s: unknown) => Promise<void>;
   listThemes: () => Promise<string[]>;
-  loadSettings: () => Promise<Settings>;
-  saveSettings: (s: Settings) => Promise<void>;
+  readTheme: (name: string) => Promise<string>;
 }
 
 export interface Settings {
-  theme: 'default' | 'dark' | string;
+  theme: string;
   fontSize: number;
-  wrap: boolean;
+  autosaveMs: number;
 }
 
 interface WindowWithApi {
