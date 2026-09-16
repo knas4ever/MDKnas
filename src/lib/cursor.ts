@@ -13,7 +13,7 @@ function textRuns(root: HTMLElement): Run[] {
     const node = walker.currentNode as Text;
     const span = node.parentElement?.closest('[data-s]') ?? null;
     if (!span) continue;
-    runs.push({ node, srcStart: Number(span.dataset.s), srcEnd: Number(span.dataset.e) });
+    runs.push({ node, srcStart: Number(span.getAttribute('data-s') ?? '0'), srcEnd: Number(span.getAttribute('data-e') ?? '0') });
   }
   return runs;
 }
@@ -29,7 +29,7 @@ function mapPos(runs: Run[], node: Node, offset: number): number {
   if (node.nodeType === Node.TEXT_NODE) {
     const run = runs.find(r => r.node === node);
     if (!run) return 0;
-    const len = node.nodeValue.length;
+    const len = (node.nodeValue ?? '').length;
     if (len === 0) return run.srcStart;
     const frac = Math.max(0, Math.min(1, offset / len));
     return Math.round(run.srcStart + (run.srcEnd - run.srcStart) * frac);
