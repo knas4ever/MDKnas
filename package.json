@@ -6,7 +6,7 @@
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "concurrently -k \"vite\" \"npm:dev:electron\"",
-    "dev:electron": "wait-on tcp:127.0.0.1:5173 && npm run build:electron && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron .",
+    "dev:electron": "wait-on tcp:127.0.0.1:5173 && npm run build:electron && electron . --dev",
     "build:renderer": "vite build",
     "build:electron": "esbuild electron/main.ts electron/preload.ts --platform=node --bundle --external:electron --outdir=dist-electron",
     "build": "npm run build:renderer && npm run build:electron",

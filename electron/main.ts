@@ -1,13 +1,15 @@
 import { app, BrowserWindow } from 'electron';
-import path from 'path';
+import path from 'node:path';
+import { registerIpc } from './ipc';
 
-const isDev = !!process.env.VITE_DEV_SERVER_URL;
+const isDev = process.argv.includes('--dev');
+const openIdx = process.argv.indexOf('--open');
+const openPath = openIdx !== -1 ? process.argv[openIdx + 1] : null;
 
-async function createWindow(): Promise<BrowserWindow> {
+function createWindow(): void {
   const win = new BrowserWindow({
-    width: 1280,
+    width: 1200,
     height: 800,
-    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -15,22 +17,24 @@ async function createWindow(): Promise<BrowserWindow> {
       sandbox: true
     }
   });
-
   if (isDev) {
-    await win.loadURL(process.env.VITE_DEV_SERVER_URL!);
-    win.webContents.openDevTools();
+    win.loadURL('http://127.0.0.1:5173');
   } else {
-    await win.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
+    win.loadFile(path.join(__dirname, '../dist/index.html'));
   }
-
-  return win;
+  win.webContents.on('did-finish-load', () => {
+    if (process.argv.includes('--smoke')) {
+      app.exit(0);
+    }
+    if (openPath) {
+      win.webContents.send('app:open-file', openPath);
+    }
+  });
 }
 
 app.whenReady().then(() => {
+  registerIpc();
   createWindow();
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
-  });
 });
 
 app.on('window-all-closed', () => {
