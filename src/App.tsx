@@ -1,31 +1,12 @@
-import { useState, useEffect } from 'react';
-import { Editor } from './components/Editor';
-import { Sidebar } from './components/Sidebar';
-import './themes/default.css';
-import './themes/dark.css';
-
-function App() {
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
-
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
-  };
-
+export default function App() {
   return (
-    <div className={`app-wrapper theme-${theme}`}>
-      <header className="header">
-        <button onClick={toggleTheme} className="p-2 border rounded">
-          {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
-        </button>
+    <div className="h-screen bg-white text-black">
+      <header className="flex h-10 items-center border-b border-gray-200 px-4 text-sm">
+        Markdown Editor
       </header>
-      <div className="flex h-full">
-        <Sidebar />
-        <div className="flex-1">
-          <Editor />
-        </div>
-      </div>
+      <main data-testid="editor-root" className="h-full">
+        <p>Editor will load here.</p>
+      </main>
     </div>
   );
 }
-
-export default App;

@@ -1,0 +1,149 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* --- Editor (rendered content) --- */
+.wysiwyg {
+  outline: none;
+  padding: 32px 40px;
+  max-width: 820px;
+  margin: 0 auto;
+  line-height: 1.65;
+  font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
+  caret-color: #3b82f6;
+}
+.wysiwyg:focus { outline: none; }
+
+.wysiwyg h1 { font-size: 1.9em; margin: 1.2em 0 0.6em; font-weight: 700; }
+.wysiwyg h2 { font-size: 1.5em; margin: 1.1em 0 0.5em; font-weight: 700; }
+.wysiwyg h3 { font-size: 1.25em; margin: 1em 0 0.4em; font-weight: 600; }
+.wysiwyg h4 { font-size: 1.1em; margin: 0.9em 0 0.4em; font-weight: 600; }
+.wysiwyg p  { margin: 0.6em 0; }
+.wysiwyg blockquote { border-left: 3px solid #d1d5db; margin: 0.8em 0; padding: 0.2em 0.9em; color: #4b5563; }
+.wysiwyg ul, .wysiwyg ol { margin: 0.6em 0; padding-left: 1.4em; }
+.wysiwyg li { margin: 0.2em 0; }
+.wysiwyg code { background: #f3f4f6; padding: 0.1em 0.35em; border-radius: 4px; font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; font-size: 0.9em; }
+.wysiwyg pre { background: #f6f8fa; border: 1px solid #e5e7eb; padding: 0.9em 1.1em; border-radius: 8px; overflow-x: auto; margin: 0.8em 0; }
+.wysiwyg pre code { background: transparent; padding: 0; }
+.wysiwyg table { border-collapse: collapse; margin: 0.8em 0; }
+.wysiwyg th, .wysiwyg td { border: 1px solid #d1d5db; padding: 0.35em 0.7em; }
+.wysiwyg th { background: #f3f4f6; }
+.wysiwyg a { color: #2563eb; text-decoration: underline; }
+.wysiwyg hr { border: none; border-top: 1px solid #d1d5db; margin: 1.2em 0; }
+.wysiwyg img { max-width: 100%; border-radius: 6px; }
+.wysiwyg .katex-display { margin: 0.8em 0; overflow-x: auto; }
+
+.mermaid {
+  margin: 1em auto;
+  max-width: 100%;
+  display: flex;
+  justify-content: center;
+}
+.mermaid pre { background: transparent; border: none; padding: 0; margin: 0; }
+
+/* --- Source-offset highlight spans --- */
+.wysiwyg span { font: inherit; }
+
+/* --- Empty state / placeholder --- */
+.wysiwyg:empty::before {
+  content: 'Start writing…';
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+/* --- Toolbar / sidebar chrome --- */
+.toolbar {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 6px 10px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fafafa;
+  flex-wrap: wrap;
+}
+.toolbar button {
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #374151;
+}
+.toolbar button:hover { background: #eef2ff; border-color: #c7d2fe; }
+.toolbar button:active { background: #e0e7ff; }
+.toolbar .divider { width: 1px; height: 18px; background: #d1d5db; margin: 0 4px; }
+
+.sidebar {
+  width: 240px;
+  border-right: 1px solid #e5e7eb;
+  background: #fafafa;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.sidebar h3 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+  margin: 12px 12px 6px;
+}
+.sidebar ul { list-style: none; margin: 0; padding: 0; }
+.sidebar li button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 4px 12px;
+  font-size: 13px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: #374151;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar li button:hover { background: #eef2ff; }
+.sidebar li button.active { background: #dbeafe; font-weight: 600; }
+
+/* --- Dark theme (CSS variables) --- */
+:root[data-theme='dark'] {
+  --bg: #1e1f24;
+  --fg: #e5e7eb;
+  --muted: #9ca3af;
+  --border: #2d3038;
+  --accent: #60a5fa;
+  --code-bg: #26282f;
+  --pre-bg: #23252c;
+  --sidebar-bg: #1a1b20;
+}
+
+:root[data-theme='dark'] .wysiwyg { color: var(--fg); }
+:root[data-theme='dark'] .wysiwyg a { color: var(--accent); }
+:root[data-theme='dark'] .wysiwyg code { background: var(--code-bg); }
+:root[data-theme='dark'] .wysiwyg pre { background: var(--pre-bg); border-color: var(--border); }
+:root[data-theme='dark'] .wysiwyg th { background: var(--code-bg); }
+:root[data-theme='dark'] .wysiwyg th,
+:root[data-theme='dark'] .wysiwyg td { border-color: var(--border); }
+:root[data-theme='dark'] .wysiwyg blockquote { border-color: var(--muted); color: var(--muted); }
+:root[data-theme='dark'] .wysiwyg hr { border-top-color: var(--border); }
+:root[data-theme='dark'] .wysiwyg:empty::before { color: var(--muted); }
+:root[data-theme='dark'] .toolbar { background: var(--sidebar-bg); border-color: var(--border); }
+:root[data-theme='dark'] .toolbar button { color: var(--fg); }
+:root[data-theme='dark'] .toolbar button:hover { background: #23252c; border-color: #374151; }
+:root[data-theme='dark'] .sidebar { background: var(--sidebar-bg); border-color: var(--border); }
+:root[data-theme='dark'] .sidebar li button:hover { background: #23252c; }
+:root[data-theme='dark'] .sidebar li button.active { background: #1d4ed8; color: #fff; }
+
+/* --- Light theme variables (parity) --- */
+:root {
+  --bg: #ffffff;
+  --fg: #111827;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --accent: #2563eb;
+  --code-bg: #f3f4f6;
+  --pre-bg: #f6f8fa;
+  --sidebar-bg: #fafafa;
+}

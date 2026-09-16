@@ -1,0 +1,8 @@
+node_modules/
+dist/
+dist-electron/
+src-tauri/
+target/
+*.log
+test-results/
+playwright-report/
