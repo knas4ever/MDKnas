@@ -1,4 +1,5 @@
 import MarkdownIt from 'markdown-it';
+import type { Token } from 'markdown-it';
 import hljs from 'highlight.js';
 import katex from 'katex';
 
@@ -37,7 +38,7 @@ interface InlineCtx {
   pos: number;
 }
 
-function renderInline(tokens: MarkdownIt.Token[], ctx: InlineCtx): string {
+function renderInline(tokens: Token[], ctx: InlineCtx): string {
   let out = '';
   for (const t of tokens) {
     switch (t.type) {
@@ -86,8 +87,9 @@ function renderInline(tokens: MarkdownIt.Token[], ctx: InlineCtx): string {
         break;
       }
       case 'image': {
-        ctx.pos += 2 + t.content.length + 1 + (t.src ?? '').length + 1;
-        out += `<img src="${escAttr(t.src ?? '')}" alt="${escAttr(t.content)}">`;
+        const src = (t as { src?: string }).src ?? '';
+        ctx.pos += 2 + t.content.length + 1 + src.length + 1;
+        out += `<img src="${escAttr(src)}" alt="${escAttr(t.content)}">`;
         break;
       }
       case 'html_inline': {
@@ -125,7 +127,7 @@ function cellContentStarts(line: string): number[] {
   return out;
 }
 
-function renderFence(t: MarkdownIt.Token, starts: number[], content: string, bi: number): string {
+function renderFence(t: Token, starts: number[], content: string, bi: number): string {
   const [ls, le] = t.map!;
   const s = starts[ls + 1];
   const e = le - 1 < starts.length ? starts[le - 1] - 1 : content.length;
@@ -148,7 +150,7 @@ function renderFence(t: MarkdownIt.Token, starts: number[], content: string, bi:
 }
 
 export function renderMarkdown(content: string): string {
-  const tokens = md.parse(content);
+  const tokens = md.parse(content, {});
   const starts = lineStarts(content);
   let bi = 0;
   let html = '';
@@ -284,7 +286,7 @@ export interface Heading {
 }
 
 export function extractHeadings(content: string): Heading[] {
-  const tokens = md.parse(content);
+  const tokens = md.parse(content, {});
   const starts = lineStarts(content);
   const out: Heading[] = [];
   for (let i = 0; i < tokens.length; i++) {
