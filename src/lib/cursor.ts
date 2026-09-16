@@ -64,14 +64,14 @@ export function sourceToDomSelection(root: HTMLElement, sel: Selection): boolean
   const place = (pos: number): { node: Text; offset: number } | null => {
     for (const r of runs) {
       if (pos <= r.srcEnd) {
-        const len = r.node.nodeValue.length;
+        const len = (r.node.nodeValue ?? "").length;
         if (len === 0) return { node: r.node, offset: 0 };
         const frac = r.srcEnd > r.srcStart ? (pos - r.srcStart) / (r.srcEnd - r.srcStart) : 0;
         return { node: r.node, offset: Math.min(len, Math.max(0, Math.round(frac * len))) };
       }
     }
     const last = runs[runs.length - 1];
-    return last ? { node: last.node, offset: last.node.nodeValue.length } : null;
+    return last ? { node: last.node, offset: (last.node.nodeValue ?? "").length } : null;
   };
   const selection = window.getSelection();
   if (!selection) return false;
