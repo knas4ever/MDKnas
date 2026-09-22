@@ -1,8 +1,8 @@
 {
-  "name": "wysiwyg-md-editor",
-  "productName": "Markdown Editor",
+  "name": "mdknas",
+  "productName": "MDKnas",
   "version": "2026.9.22",
-  "description": "Offline WYSIWYG Markdown editor",
+  "description": "MDKnas \u2014 the crispy WYSIWYG markdown editor",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "concurrently -k \"vite\" \"npm:dev:electron\"",

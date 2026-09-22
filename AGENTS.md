@@ -1,4 +1,4 @@
-# Markdown editor — agent guide
+# MDKnas — agent guide
 
 ## Release process
 - Versionsnummer er build-datoen i formatet `ÅÅÅÅ.M.D` (f.eks. `2026.9.22`) i `package.json`
