@@ -623,10 +623,6 @@ export function renderMarkdown(
         paraEnd = t.map![1];
         emitCovered(starts[ls]);
         const inlinePos0 = starts[ls] + lineGap(0);
-        if (inlinePos0 > covered) {
-          html += gapSpan(covered, inlinePos0, true);
-          covered = inlinePos0;
-        }
 
         if (
           itemHasContent.length > 0 &&
@@ -635,9 +631,29 @@ export function renderMarkdown(
         ) {
           // Anchor position: past the marker AND the checkbox prefix, so
           // typing there becomes the item text (not checkbox markup).
-          itemAnchorPos[itemAnchorPos.length - 1] = covered + (taskPrefix > 0 ? taskPrefix : 0);
+          itemAnchorPos[itemAnchorPos.length - 1] =
+            Math.max(covered, inlinePos0) + (taskPrefix > 0 ? taskPrefix : 0);
         }
-        if (!inListItem) html += `<p data-bi="${nextBi()}">`;
+        if (!inListItem && (quotePrefix > 0 || listPrefix > 0)) {
+          // Inside a quote/list: emit the leading gap INSIDE the <p>. A
+          // leaked inline gap before the <p> renders as a phantom empty
+          // line (the line box strut keeps the inherited line-height), and
+          // the <p> would no longer be the container's first child. No
+          // blank source line can sit in this range (a bare newline line
+          // would have ended the quote/list), so a plain gap is safe.
+          html += `<p data-bi="${nextBi()}">`;
+          if (inlinePos0 > covered) {
+            html += gapSpan(covered, inlinePos0, true);
+            covered = inlinePos0;
+          }
+        } else {
+          emitCovered(starts[ls]);
+          if (inlinePos0 > covered) {
+            html += gapSpan(covered, inlinePos0, true);
+            covered = inlinePos0;
+          }
+          if (!inListItem) html += `<p data-bi="${nextBi()}">`;
+        }
         break;
       }
       case 'html_block': {
