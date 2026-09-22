@@ -56,11 +56,16 @@
         "AppImage",
         "deb"
       ],
-      "category": "Utility"
+      "category": "Utility",
+      "maintainer": "knas4ever <knas4ever@gmail.com>"
     },
     "files": [
       "dist/**",
       "dist-electron/**"
     ]
+  },
+  "author": {
+    "name": "knas4ever",
+    "email": "knas4ever@gmail.com"
   }
 }
