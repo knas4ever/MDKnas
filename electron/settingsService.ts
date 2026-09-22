@@ -5,6 +5,7 @@ export interface Settings {
   theme: string;
   fontSize: number;
   autosaveMs: number;
+  lastFolder?: string | null;
 }
 
 export const DEFAULT_SETTINGS: Settings = { theme: 'light', fontSize: 16, autosaveMs: 1000 };

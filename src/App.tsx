@@ -32,6 +32,14 @@ export default function App() {
   const tableResolve = useRef<((s: TableSize | null) => void) | null>(null);
   const undoStack = useRef<{ content: string; selection: Selection }[]>([]);
   const redoStack = useRef<{ content: string; selection: Selection }[]>([]);
+  const settingsLoadedRef = useRef(false);
+
+  // Persist settings (theme, last folder, …) whenever they change, but only
+  // after the initial load has completed so defaults don't clobber the file.
+  useEffect(() => {
+    if (!settingsLoadedRef.current) return;
+    void window.api.saveSettings(settings);
+  }, [settings]);
   const contentRef = useRef('');
   const savedContentRef = useRef('');
   const watchRef = useRef<(() => void) | null>(null);
@@ -108,6 +116,7 @@ export default function App() {
     setRootDir(dir);
     setSidebarMode('files');
     refreshTree(dir);
+    setSettings(s => ({ ...s, lastFolder: dir }));
     await ensureWatched(dir);
   }, [refreshTree, ensureWatched]);
 
@@ -180,7 +189,17 @@ export default function App() {
     });
     const offOpen = window.api.onOpenFile(openFile);
     const offOpenFolder = window.api.onOpenFolder(dir => void openFolderAt(dir));
-    window.api.loadSettings().then(setSettings);
+    window.api.loadSettings().then(s => {
+      settingsLoadedRef.current = true;
+      setSettings(s);
+      // Restore the folder from the last session if it still exists.
+      if (s.lastFolder) {
+        window.api
+          .listFiles(s.lastFolder)
+          .then(() => openFolderAt(s.lastFolder!))
+          .catch(() => {});
+      }
+    });
     window.api.listThemes().then(ts => setThemeNames(['light', 'dark', ...ts]));
     return () => {
       offWatch();

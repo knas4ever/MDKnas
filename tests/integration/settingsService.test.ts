@@ -23,6 +23,18 @@ describe('settingsService', () => {
     expect(loadSettings(dir)).toEqual(s);
   });
 
+  it('round-trips lastFolder', () => {
+    const s = { ...DEFAULT_SETTINGS, lastFolder: '/home/user/docs' };
+    saveSettings(dir, s);
+    expect(loadSettings(dir).lastFolder).toBe('/home/user/docs');
+  });
+
+  it('round-trips lastFolder set to null (cleared)', () => {
+    saveSettings(dir, { ...DEFAULT_SETTINGS, lastFolder: '/home/user/docs' });
+    saveSettings(dir, { ...DEFAULT_SETTINGS, lastFolder: null });
+    expect(loadSettings(dir).lastFolder).toBeNull();
+  });
+
   it('merges a partial saved file with defaults', () => {
     fs.writeFileSync(path.join(dir, 'settings.json'), JSON.stringify({ theme: 'dark' }));
     expect(loadSettings(dir)).toEqual({ ...DEFAULT_SETTINGS, theme: 'dark' });

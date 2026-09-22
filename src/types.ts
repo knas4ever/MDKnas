@@ -9,6 +9,7 @@ export interface Settings {
   theme: string;
   fontSize: number;
   autosaveMs: number;
+  lastFolder?: string | null;
 }
 
 export interface EditorApi {
