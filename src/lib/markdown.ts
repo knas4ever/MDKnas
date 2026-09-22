@@ -567,7 +567,9 @@ export function renderMarkdown(
       case 'table_open': {
         tableEnd = t.map![1];
         emitCovered(starts[t.map![0]]);
-        html += `<table data-bi="${nextBi()}">`;
+        // data-s/data-e: source range of the whole table (used by the
+        // right-click context menu to rebuild the table in the source).
+        html += `<table data-bi="${nextBi()}" data-s="${starts[t.map![0]]}" data-e="${lineEnd(tableEnd)}">`;
         break;
       }
       case 'table_close': {

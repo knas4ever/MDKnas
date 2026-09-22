@@ -553,3 +553,120 @@ export function applyAction(
     }
   }
 }
+
+// Right-click table context menu operations.
+export type TableOp =
+  | 'row-above'
+  | 'row-below'
+  | 'row-delete'
+  | 'col-before'
+  | 'col-after'
+  | 'col-delete';
+
+// Marker placed in the rebuilt table so the caret can land in the target
+// cell; it is stripped from the result.
+const TABLE_MARK = '\u0000';
+
+// Split a pipe row into cell contents. Outer pipes are optional and `\|`
+// escapes are kept intact.
+function splitRow(line: string): string[] {
+  let t = line.trim();
+  if (t.startsWith('|')) t = t.slice(1);
+  if (t.endsWith('|')) t = t.slice(0, -1);
+  const cells: string[] = [];
+  let cur = '';
+  for (let i = 0; i < t.length; i += 1) {
+    const ch = t[i];
+    if (ch === '\\' && t[i + 1] === '|') {
+      cur += '\\|';
+      i += 1;
+    } else if (ch === '|') {
+      cells.push(cur.trim());
+      cur = '';
+    } else {
+      cur += ch;
+    }
+  }
+  cells.push(cur.trim());
+  return cells;
+}
+
+function joinRow(cells: string[]): string {
+  return `| ${cells.join(' | ')} |`;
+}
+
+/**
+ * Add/remove a row or column of the pipe table whose source range is
+ * [tableStart, tableEnd). `rowIndex` 0 is the header row, `colIndex` is the
+ * cell under the cursor. Returns null when the operation is impossible
+ * (e.g. deleting the header row or the last column).
+ */
+export function tableOperation(
+  content: string,
+  tableStart: number,
+  tableEnd: number,
+  rowIndex: number,
+  colIndex: number,
+  op: TableOp
+): { content: string; selection: Selection } | null {
+  if (tableStart < 0 || tableEnd > content.length || tableEnd <= tableStart) return null;
+  const lines = content.slice(tableStart, tableEnd).split('\n');
+  const trailing = lines[lines.length - 1] === '' ? '\n' : '';
+  if (trailing) lines.pop();
+  const rows = lines.map(splitRow);
+  if (rows.length < 2) return null; // header + separator required
+  const cols = rows[0].length;
+  const row = Math.max(0, Math.min(rowIndex, rows.length - 1));
+  const col = Math.max(0, Math.min(colIndex, cols - 1));
+
+  if (op === 'row-above' && row === 0) return null; // header must stay first
+  if (op === 'row-delete' && (row === 0 || rows.length <= 2)) return null;
+  if (op === 'col-delete' && cols <= 1) return null;
+
+  const work = rows.map(r => [...r]);
+  let targetRow = row;
+  let targetCol = col;
+
+  if (op === 'row-below') {
+    const cells: string[] = [];
+    for (let i = 0; i < cols; i += 1) cells.push(i === col ? TABLE_MARK : '');
+    work.splice(row + 1, 0, cells);
+    targetRow = row + 1;
+  } else if (op === 'row-above') {
+    const cells: string[] = [];
+    for (let i = 0; i < cols; i += 1) cells.push(i === col ? TABLE_MARK : '');
+    work.splice(row, 0, cells);
+  } else if (op === 'row-delete') {
+    work.splice(row, 1);
+    targetRow = Math.min(row, work.length - 1);
+    work[targetRow][targetCol] = TABLE_MARK + (work[targetRow][targetCol] ?? '');
+  } else if (op === 'col-before' || op === 'col-after') {
+    const at = op === 'col-before' ? col : col + 1;
+    for (let r = 0; r < work.length; r += 1) {
+      // Separator row keeps a valid alignment cell; the clicked row gets
+      // the caret marker; all other rows get an empty cell.
+      const cell = r === 1 ? '---' : r === row ? TABLE_MARK : '';
+      work[r].splice(Math.min(at, work[r].length), 0, cell);
+    }
+    targetCol = at;
+  } else {
+    // col-delete
+    for (let r = 0; r < work.length; r += 1) {
+      const c = Math.min(col, work[r].length - 1);
+      work[r].splice(c, 1);
+    }
+    targetCol = Math.min(col, work[row].length - 1);
+    work[row][targetCol] = TABLE_MARK + (work[row][targetCol] ?? '');
+  }
+
+  const newBlock = work.map(joinRow).join('\n') + trailing;
+  const idx = newBlock.indexOf(TABLE_MARK);
+  if (idx < 0) return null;
+  const caret = tableStart + idx;
+  const next =
+    content.slice(0, tableStart) +
+    newBlock.slice(0, idx) +
+    newBlock.slice(idx + 1) +
+    content.slice(tableEnd);
+  return { content: next, selection: { start: caret, end: caret } };
+}

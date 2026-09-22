@@ -114,7 +114,7 @@ describe('renderMarkdown', () => {
 
   it('renders tables', () => {
     const html = renderMarkdown('| a | b |\n|---|---|\n| 1 | 2 |');
-    expect(html).toContain('<table data-bi="0">');
+    expect(html).toContain('<table data-bi="0" data-s="0" data-e="29">');
     expect(html).toContain('<th><span data-gap data-s="0" data-e="2">');
     expect(html).toContain('<span data-s="2" data-e="3">a</span>');
     expect(html).toContain('<td><span data-gap data-s="7" data-e="22">');

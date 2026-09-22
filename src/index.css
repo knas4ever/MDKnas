@@ -173,6 +173,7 @@
   --code-bg: #3a4150;
   --pre-bg: #23252c;
   --sidebar-bg: #1a1b20;
+  --menu-hover: #23252c;
 }
 
 :root[data-theme='dark'] .wysiwyg-root { color: var(--fg); }
@@ -215,7 +216,11 @@
   --code-bg: #f3f4f6;
   --pre-bg: #f6f8fa;
   --sidebar-bg: #fafafa;
+  --menu-hover: #eef2ff;
 }
+
+/* Right-click table context menu */
+.table-menu button { color: var(--fg); background: transparent; border: none; cursor: pointer; }
 
 /* --- Typewriter mode --- */
 .wysiwyg-root[data-typewriter='true'] [data-bi] { opacity: 0.25; }

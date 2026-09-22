@@ -607,3 +607,64 @@ test('external edit via temp-file+rename reloads the doc', async () => {
     .toBe(true);
   await app.close();
 });
+
+test('right-click table context menu adds/removes rows and columns', async () => {
+  const file = tempDoc('| a | b |\n| --- | --- |\n| 1 | 2 |');
+  const app = await electron.launch({ args: ['.', '--open', file] });
+  const win = await app.firstWindow();
+  const box = win.locator('.wysiwyg-root');
+  await box.locator('table').waitFor();
+
+  const read = () => fs.readFileSync(file, 'utf-8');
+  const menu = win.locator('.table-menu');
+
+  // Add a row below the first body row.
+  await box.locator('tr:has(td)').first().locator('td').first().click({ button: 'right' });
+  await expect(menu).toBeVisible();
+  await menu.getByRole('menuitem', { name: 'Add row below' }).click();
+  await expect(menu).not.toBeVisible();
+  await expect.poll(read, { timeout: 5000 }).toBe(
+    '| a | b |\n| --- | --- |\n| 1 | 2 |\n|  |  |'
+  );
+
+  // Add a column after the first column.
+  await box.locator('tr:has(td)').first().locator('td').first().click({ button: 'right' });
+  await menu.getByRole('menuitem', { name: 'Add column after' }).click();
+  await expect.poll(read, { timeout: 5000 }).toBe(
+    '| a |  | b |\n| --- | --- | --- |\n| 1 |  | 2 |\n|  |  |  |'
+  );
+
+  // Delete the (empty) last row.
+  await box.locator('tr:has(td)').last().locator('td').first().click({ button: 'right' });
+  await menu.getByRole('menuitem', { name: 'Delete row' }).click();
+  await expect.poll(read, { timeout: 5000 }).toBe(
+    '| a |  | b |\n| --- | --- | --- |\n| 1 |  | 2 |'
+  );
+
+  // Delete the last column.
+  await box.locator('tr:has(td)').first().locator('td').last().click({ button: 'right' });
+  await menu.getByRole('menuitem', { name: 'Delete column' }).click();
+  await expect.poll(read, { timeout: 5000 }).toBe(
+    '| a |  |\n| --- | --- |\n| 1 |  |'
+  );
+
+  await app.close();
+});
+
+test('right-click on the header row disables row removal', async () => {
+  const file = tempDoc('| a | b |\n| --- | --- |\n| 1 | 2 |');
+  const app = await electron.launch({ args: ['.', '--open', file] });
+  const win = await app.firstWindow();
+  const box = win.locator('.wysiwyg-root');
+  await box.locator('table').waitFor();
+
+  await box.locator('tr:has(th)').first().locator('th').first().click({ button: 'right' });
+  const menu = win.locator('.table-menu');
+  await expect(menu).toBeVisible();
+  await expect(menu.getByRole('menuitem', { name: 'Delete row' })).toBeDisabled();
+  await expect(menu.getByRole('menuitem', { name: 'Add row above' })).toBeDisabled();
+  await win.keyboard.press('Escape');
+  await expect(menu).not.toBeVisible();
+
+  await app.close();
+});

@@ -11,8 +11,10 @@ import {
   handleEnter,
   indent,
   insertText,
+  tableOperation,
   type EditorAction,
-  type Selection
+  type Selection,
+  type TableOp
 } from '../lib/editorActions';
 
 export interface WysiwygEditorHandle {
@@ -245,6 +247,17 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
   const [imgVersion, setImgVersion] = useState(0);
   const retryTick = useRef<(() => void) | null>(null);
   const processSelectionRef = useRef<() => void>(() => {});
+  // Right-click context menu on a table: add/remove rows and columns.
+  const [tableMenu, setTableMenu] = useState<{
+    x: number;
+    y: number;
+    s: number;
+    e: number;
+    row: number;
+    col: number;
+    rows: number;
+    cols: number;
+  } | null>(null);
 
   // Block file drops anywhere outside the editor so the window doesn't
   // navigate to the dropped file.
@@ -515,6 +528,53 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
     }
   };
 
+  const handleContextMenu = (e: React.MouseEvent<HTMLDivElement>): void => {
+    const el = e.target as HTMLElement;
+    const table = el.closest('table') as HTMLElement | null;
+    if (!table) return; // elsewhere: keep the browser's default menu
+    const cell = el.closest('td, th') as HTMLElement | null;
+    if (!cell) return;
+    const s = Number(table.dataset.s ?? '-1');
+    const en = Number(table.dataset.e ?? '-1');
+    if (!Number.isInteger(s) || !Number.isInteger(en) || s < 0 || en > content.length) return;
+    e.preventDefault();
+    const tr = cell.parentElement as HTMLTableRowElement | null;
+    const tableRows = Array.from(table.querySelectorAll('tr'));
+    const row = tr ? tableRows.indexOf(tr) : -1;
+    const col = tr ? Array.from(tr.children).indexOf(cell) : -1;
+    if (row < 0 || col < 0) return;
+    // DOM rows: 0 = header, 1.. = body. The separator row is not rendered
+    // as a DOM row, so source row k (k >= 1) is DOM row k - 1.
+    const srcRow = row === 0 ? 0 : row + 1;
+    setTableMenu({
+      x: e.clientX,
+      y: e.clientY,
+      s,
+      e: en,
+      row: srcRow,
+      col,
+      rows: tableRows.length,
+      cols: table.querySelector('tr')?.children.length ?? 0
+    });
+  };
+
+  const runTableOp = (op: TableOp): void => {
+    const m = tableMenu;
+    if (!m) return;
+    setTableMenu(null);
+    const res = tableOperation(content, m.s, m.e, m.row, m.col, op);
+    if (res) apply(res);
+  };
+
+  useEffect(() => {
+    if (!tableMenu) return;
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') setTableMenu(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [tableMenu]);
+
   // Drag & drop: images are saved into the document's assets folder
   // (<name>_assets/) and inserted as markdown at the caret position.
   const hasFiles = (e: React.DragEvent<HTMLDivElement>): boolean =>
@@ -688,6 +748,7 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
   };
 
   return (
+    <>
     <div
       ref={rootRef}
       role="textbox"
@@ -711,8 +772,44 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
         composing.current = false;
         if (e.data) apply(insertText(content, selection, e.data));
       }}
+      onContextMenu={handleContextMenu}
       style={{ fontSize: `${fontSize}px` }}
       className="wysiwyg-root"
     />
+      {tableMenu && (
+        <>
+          {/* Click-away layer */}
+          <div className="fixed inset-0 z-40" onMouseDown={() => setTableMenu(null)} />
+          <div
+            className="table-menu fixed z-50 flex w-48 flex-col gap-0.5 rounded-md border border-[var(--border)] bg-[var(--bg)] p-1 text-sm shadow-lg"
+            style={{ left: tableMenu.x, top: tableMenu.y }}
+            onMouseDown={e => e.stopPropagation()}
+            role="menu"
+            aria-label="Table actions"
+          >
+            {(
+              [
+                { op: 'row-above' as TableOp, label: 'Add row above', disabled: tableMenu.row === 0 },
+                { op: 'row-below' as TableOp, label: 'Add row below', disabled: false },
+                { op: 'row-delete' as TableOp, label: 'Delete row', disabled: tableMenu.row === 0 || tableMenu.rows <= 1 },
+                { op: 'col-before' as TableOp, label: 'Add column before', disabled: false },
+                { op: 'col-after' as TableOp, label: 'Add column after', disabled: false },
+                { op: 'col-delete' as TableOp, label: 'Delete column', disabled: tableMenu.cols <= 1 }
+              ] as Array<{ op: TableOp; label: string; disabled: boolean }>
+            ).map(item => (
+              <button
+                key={item.op}
+                role="menuitem"
+                disabled={item.disabled}
+                onClick={() => runTableOp(item.op)}
+                className="rounded px-2 py-1 text-left hover:bg-[var(--menu-hover)] disabled:cursor-default disabled:opacity-40"
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </>
   );
 });

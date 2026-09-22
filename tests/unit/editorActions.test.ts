@@ -15,6 +15,7 @@ import {
   applyLink,
   toggleCodeBlock,
   insertTable,
+  tableOperation,
   type Selection
 } from '../../src/lib/editorActions';
 
@@ -231,6 +232,68 @@ describe('insertTable', () => {
     expect(r.content).toBe(
       '| Column 1 | Column 2 |\n| --- | --- |\n|    |    |\n|    |    |\nx'
     );
+  });
+});
+
+describe('tableOperation', () => {
+  // Source row indices: 0 = header, 1 = separator, 2+ = body.
+  const T = '| a | b |\n| --- | --- |\n| 1 | 2 |';
+  const full = (s: number, e: number): Selection => ({ start: s, end: e });
+
+  it('adds a row below the clicked row', () => {
+    const r = tableOperation(T, 0, T.length, 2, 0, 'row-below');
+    expect(r?.content).toBe('| a | b |\n| --- | --- |\n| 1 | 2 |\n|  |  |');
+    expect(r?.selection).toEqual(full(36, 36)); // first cell of new row
+  });
+
+  it('adds a row above the first body row', () => {
+    const r = tableOperation(T, 0, T.length, 2, 1, 'row-above');
+    expect(r?.content).toBe('| a | b |\n| --- | --- |\n|  |  |\n| 1 | 2 |');
+    expect(r?.selection).toEqual(full(29, 29));
+  });
+
+  it('refuses to add a row above the header', () => {
+    expect(tableOperation(T, 0, T.length, 0, 0, 'row-above')).toBeNull();
+  });
+
+  it('deletes a body row and keeps the caret in the neighbour', () => {
+    const r = tableOperation(T, 0, T.length, 2, 0, 'row-delete');
+    expect(r?.content).toBe('| a | b |\n| --- | --- |');
+    expect(r?.selection).toEqual(full(12, 12)); // start of separator cell
+  });
+
+  it('refuses to delete the header row', () => {
+    expect(tableOperation(T, 0, T.length, 0, 0, 'row-delete')).toBeNull();
+  });
+
+  it('adds a column before with the caret in the new cell', () => {
+    const r = tableOperation(T, 0, T.length, 2, 0, 'col-before');
+    expect(r?.content).toBe('|  | a | b |\n| --- | --- | --- |\n|  | 1 | 2 |');
+    expect(r?.selection).toEqual(full(35, 35));
+  });
+
+  it('adds a column after', () => {
+    const r = tableOperation(T, 0, T.length, 2, 1, 'col-after');
+    expect(r?.content).toBe('| a | b |  |\n| --- | --- | --- |\n| 1 | 2 |  |');
+  });
+
+  it('deletes a column and keeps the caret in the shifted cell', () => {
+    const r = tableOperation(T, 0, T.length, 2, 1, 'col-delete');
+    expect(r?.content).toBe('| a |\n| --- |\n| 1 |');
+    expect(r?.selection).toEqual(full(16, 16));
+  });
+
+  it('refuses to delete the last column', () => {
+    const one = '| a |\n| --- |\n| 1 |';
+    expect(tableOperation(one, 0, one.length, 2, 0, 'col-delete')).toBeNull();
+  });
+
+  it('preserves text after the table', () => {
+    const doc = 'start\n' + T + '\nend';
+    const s = doc.indexOf(T);
+    const r = tableOperation(doc, s, s + T.length, 2, 0, 'row-below');
+    expect(r?.content).toBe('start\n' + T + '\n|  |  |\nend');
+    expect(r?.selection).toEqual(full(s + 36, s + 36));
   });
 });
 
