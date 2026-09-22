@@ -42,6 +42,24 @@ describe('cursor', () => {
     expect(sourceToDomSelection(makeRoot(''), { start: 0, end: 0 })).toBe(false);
   });
 
+  it('round-trips a caret placed after a trailing space', () => {
+    const content = 'line one\nline two ';
+    const root = makeRoot(renderMarkdown(content));
+    expect(
+      sourceToDomSelection(root, { start: content.length, end: content.length })
+    ).toBe(true);
+    const sel = window.getSelection()!;
+    const r = sel.getRangeAt(0);
+    const mapped = domSelectionToSource(root, {
+      anchorNode: r.startContainer,
+      anchorOffset: r.startOffset,
+      focusNode: r.endContainer,
+      focusOffset: r.endOffset
+    });
+    expect(mapped.start).toBe(content.length);
+    expect(mapped.end).toBe(content.length);
+  });
+
   it('maps offsets inside bold text', () => {
     const root = makeRoot(renderMarkdown('**bold**'));
     sourceToDomSelection(root, { start: 4, end: 4 });
@@ -49,5 +67,21 @@ describe('cursor', () => {
     const node = root.querySelector('span[data-s="2"]')!.firstChild as Text;
     expect(sel.anchorNode).toBe(node);
     expect(sel.anchorOffset).toBe(2);
+  });
+
+  it('element anchors inside a table cell skip leading gap spans', () => {
+    const root = makeRoot(
+      '<table><tr><td><span data-gap data-s="0" data-e="5">' +
+        '\u200b\u200b\u200b\u200b\u200b</span><span data-s="5" data-e="5">\u00a0</span></td></tr></table>'
+    );
+    const td = root.querySelector('td')!;
+    const mapped = domSelectionToSource(root, {
+      anchorNode: td,
+      anchorOffset: 0,
+      focusNode: td,
+      focusOffset: 0
+    });
+    expect(mapped.start).toBe(5);
+    expect(mapped.end).toBe(5);
   });
 });

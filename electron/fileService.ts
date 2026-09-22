@@ -59,15 +59,26 @@ export function deleteFile(p: string): void {
   fs.rmSync(p, { recursive: true });
 }
 
+// Non-recursive watch: a recursive watch crashes on entries it cannot
+// watch (EACCES) and silently stops reporting afterwards. The open file
+// is covered by polling in the renderer; this watcher drives fast tree
+// refreshes for the watched directory itself.
 export function watchDir(
   dir: string,
   cb: (event: string, filename: string) => void
 ): () => void {
   let timer: NodeJS.Timeout | null = null;
-  const watcher = fs.watch(dir, { recursive: true, persistent: false }, (eventType, filename) => {
-    if (timer) clearTimeout(timer);
-    timer = setTimeout(() => cb(eventType, filename ?? ''), 100);
-  });
+  let watcher: fs.FSWatcher;
+  try {
+    watcher = fs.watch(dir, { persistent: false }, (eventType, filename) => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => cb(eventType, filename ?? ''), 100);
+    });
+  } catch {
+    return () => {};
+  }
+  // Permission quirks on individual entries must not crash the app.
+  watcher.on('error', () => {});
   return () => {
     if (timer) clearTimeout(timer);
     watcher.close();

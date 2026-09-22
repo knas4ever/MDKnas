@@ -8,7 +8,7 @@ export interface Api {
   createFile: (p: string, content?: string) => Promise<void>;
   renameFile: (from: string, to: string) => Promise<void>;
   deleteFile: (p: string) => Promise<void>;
-  watchDir: (dir: string) => Promise<void>;
+  watchDir: (dir: string) => Promise<() => void>;
   onWatch: (cb: (event: string, filename: string) => void) => () => void;
   onOpenFile: (cb: (path: string) => void) => () => void;
   loadSettings: () => Promise<unknown>;

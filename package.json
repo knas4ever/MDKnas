@@ -12,7 +12,7 @@
     "build": "npm run build:renderer && npm run build:electron",
     "test": "vitest run",
     "test:watch": "vitest",
-    "e2e": "playwright test",
+    "e2e": "npm run build && playwright test",
     "lint": "tsc --noEmit",
     "typecheck:main": "tsc --noEmit -p tsconfig.main.json",
     "dist": "npm run build && electron-builder --linux"
@@ -40,6 +40,7 @@
     "wait-on": "^7.2.0"
   },
   "dependencies": {
+    "@testing-library/react": "^16.3.3",
     "@types/markdown-it": "^14.2.0",
     "highlight.js": "^11.9.0",
     "katex": "^0.16.9",

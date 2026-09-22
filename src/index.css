@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* --- Editor (rendered content) --- */
-.wysiwyg {
+.wysiwyg-root {
   outline: none;
   padding: 32px 40px;
   max-width: 820px;
@@ -12,26 +12,53 @@
   font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
   caret-color: #3b82f6;
 }
-.wysiwyg:focus { outline: none; }
+.wysiwyg-root:focus { outline: none; }
 
-.wysiwyg h1 { font-size: 1.9em; margin: 1.2em 0 0.6em; font-weight: 700; }
-.wysiwyg h2 { font-size: 1.5em; margin: 1.1em 0 0.5em; font-weight: 700; }
-.wysiwyg h3 { font-size: 1.25em; margin: 1em 0 0.4em; font-weight: 600; }
-.wysiwyg h4 { font-size: 1.1em; margin: 0.9em 0 0.4em; font-weight: 600; }
-.wysiwyg p  { margin: 0.6em 0; }
-.wysiwyg blockquote { border-left: 3px solid #d1d5db; margin: 0.8em 0; padding: 0.2em 0.9em; color: #4b5563; }
-.wysiwyg ul, .wysiwyg ol { margin: 0.6em 0; padding-left: 1.4em; }
-.wysiwyg li { margin: 0.2em 0; }
-.wysiwyg code { background: #f3f4f6; padding: 0.1em 0.35em; border-radius: 4px; font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; font-size: 0.9em; }
-.wysiwyg pre { background: #f6f8fa; border: 1px solid #e5e7eb; padding: 0.9em 1.1em; border-radius: 8px; overflow-x: auto; margin: 0.8em 0; }
-.wysiwyg pre code { background: transparent; padding: 0; }
-.wysiwyg table { border-collapse: collapse; margin: 0.8em 0; }
-.wysiwyg th, .wysiwyg td { border: 1px solid #d1d5db; padding: 0.35em 0.7em; }
-.wysiwyg th { background: #f3f4f6; }
-.wysiwyg a { color: #2563eb; text-decoration: underline; }
-.wysiwyg hr { border: none; border-top: 1px solid #d1d5db; margin: 1.2em 0; }
-.wysiwyg img { max-width: 100%; border-radius: 6px; }
-.wysiwyg .katex-display { margin: 0.8em 0; overflow-x: auto; }
+.wysiwyg-root h1 { font-size: 1.9em; margin: 1.2em 0 0.6em; font-weight: 700; }
+.wysiwyg-root h2 { font-size: 1.5em; margin: 1.1em 0 0.5em; font-weight: 700; }
+.wysiwyg-root h3 { font-size: 1.25em; margin: 1em 0 0.4em; font-weight: 600; }
+.wysiwyg-root h4 { font-size: 1.1em; margin: 0.9em 0 0.4em; font-weight: 600; }
+.wysiwyg-root p  { margin: 0.6em 0; }
+.wysiwyg-root blockquote { border-left: 3px solid #d1d5db; margin: 0.8em 0; padding: 0.2em 0.9em; color: #4b5563; }
+.wysiwyg-root ul, .wysiwyg-root ol { margin: 0.6em 0; padding-left: 1.4em; }
+/* Tailwind preflight strips list markers; restore them. */
+.wysiwyg-root ul { list-style: disc; }
+.wysiwyg-root ol { list-style: decimal; }
+.wysiwyg-root li { margin: 0.2em 0; }
+/* Blank lines that terminate a list render at the list level; pull them
+   back to the list's left edge (outside the marker padding). */
+.wysiwyg-root ul > div[data-blank-line],
+.wysiwyg-root ol > div[data-blank-line] {
+  margin-left: -1.4em;
+}
+.wysiwyg-root code { background: #e5eaf2; border: 1px solid #c8d2e0; padding: 0.1em 0.35em; border-radius: 4px; font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; font-size: 0.9em; }
+.wysiwyg-root pre { background: #f6f8fa; border: 1px solid #e5e7eb; padding: 0.9em 1.1em; border-radius: 8px; overflow-x: auto; margin: 0.8em 0; }
+.wysiwyg-root pre code { background: transparent; border: none; padding: 0; }
+:root[data-theme='dark'] .wysiwyg-root pre code { background: transparent; border: none; padding: 0; }
+
+/* Fenced code blocks carry a Copy button in their top-right corner. */
+.wysiwyg-root .codeblock { position: relative; }
+.wysiwyg-root .code-copy {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+  opacity: 0;
+}
+.wysiwyg-root .codeblock:hover .code-copy { opacity: 0.9; }
+.wysiwyg-root table { border-collapse: collapse; margin: 0.8em 0; }
+.wysiwyg-root th, .wysiwyg-root td { border: 1px solid #d1d5db; padding: 0.35em 0.7em; }
+.wysiwyg-root th { background: #f3f4f6; }
+.wysiwyg-root a { color: #2563eb; text-decoration: underline; }
+.wysiwyg-root hr { border: none; border-top: 1px solid #d1d5db; margin: 1.2em 0; }
+.wysiwyg-root img { max-width: 100%; border-radius: 6px; }
+.wysiwyg-root .katex-display { margin: 0.8em 0; overflow-x: auto; }
 
 .mermaid {
   margin: 1em auto;
@@ -42,10 +69,35 @@
 .mermaid pre { background: transparent; border: none; padding: 0; margin: 0; }
 
 /* --- Source-offset highlight spans --- */
-.wysiwyg span { font: inherit; }
+.wysiwyg-root span { font: inherit; }
+
+/* Zero-width source-coverage anchors. If one leaks between block-level
+   elements it would form an anonymous line box with a full line height;
+   line-height: 0 keeps it invisible in that case. */
+.wysiwyg-root [data-gap] { line-height: 0; font-size: 0; }
+/* Source-only spans (fence markers etc.): in the DOM for cursor mapping
+   but never visible or clickable. */
+.wysiwyg-root .src-only, .wysiwyg-root .src-only [data-gap] { display: none; }
+
+/* --- Raw markdown (source) view --- */
+.source-view {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  resize: none;
+  padding: 32px 40px;
+  font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.65;
+  background: var(--bg);
+  color: var(--fg);
+  caret-color: #3b82f6;
+}
 
 /* --- Empty state / placeholder --- */
-.wysiwyg:empty::before {
+.wysiwyg-root:empty::before {
   content: 'Start writing…';
   color: #9ca3af;
   pointer-events: none;
@@ -114,21 +166,34 @@
   --muted: #9ca3af;
   --border: #2d3038;
   --accent: #60a5fa;
-  --code-bg: #26282f;
+  --code-bg: #3a4150;
   --pre-bg: #23252c;
   --sidebar-bg: #1a1b20;
 }
 
-:root[data-theme='dark'] .wysiwyg { color: var(--fg); }
-:root[data-theme='dark'] .wysiwyg a { color: var(--accent); }
-:root[data-theme='dark'] .wysiwyg code { background: var(--code-bg); }
-:root[data-theme='dark'] .wysiwyg pre { background: var(--pre-bg); border-color: var(--border); }
-:root[data-theme='dark'] .wysiwyg th { background: var(--code-bg); }
-:root[data-theme='dark'] .wysiwyg th,
-:root[data-theme='dark'] .wysiwyg td { border-color: var(--border); }
-:root[data-theme='dark'] .wysiwyg blockquote { border-color: var(--muted); color: var(--muted); }
-:root[data-theme='dark'] .wysiwyg hr { border-top-color: var(--border); }
-:root[data-theme='dark'] .wysiwyg:empty::before { color: var(--muted); }
+:root[data-theme='dark'] .wysiwyg-root { color: var(--fg); }
+:root[data-theme='dark'] .wysiwyg-root a { color: var(--accent); }
+:root[data-theme='dark'] .wysiwyg-root code { background: var(--code-bg); border-color: #525c6c; }
+
+/* Inline mark / highlight (Typora-style) */
+.wysiwyg-root mark { background: #ffe9a1; color: #1d1b12; }
+:root[data-theme='dark'] .wysiwyg-root mark { background: #6d5a10; color: #f7f3e2; }
+
+/* GFM task lists: checkbox toggling the "[ ]" / "[x]" source character;
+   the list bullet is replaced by the checkbox itself. */
+.wysiwyg-root li.task-item { list-style: none; }
+.wysiwyg-root .task { cursor: pointer; }
+.wysiwyg-root .task input[type='checkbox'] { margin: 0 0.35em 0 0; }
+/* Continuation lines of a task item align with the item text (indented
+   past the checkbox that replaced the bullet). */
+.wysiwyg-root .li-cont { padding-left: calc(13px + 0.35em); }
+:root[data-theme='dark'] .wysiwyg-root pre { background: var(--pre-bg); border-color: var(--border); }
+:root[data-theme='dark'] .wysiwyg-root th { background: var(--code-bg); }
+:root[data-theme='dark'] .wysiwyg-root th,
+:root[data-theme='dark'] .wysiwyg-root td { border-color: var(--border); }
+:root[data-theme='dark'] .wysiwyg-root blockquote { border-color: var(--muted); color: var(--muted); }
+:root[data-theme='dark'] .wysiwyg-root hr { border-top-color: var(--border); }
+:root[data-theme='dark'] .wysiwyg-root:empty::before { color: var(--muted); }
 :root[data-theme='dark'] .toolbar { background: var(--sidebar-bg); border-color: var(--border); }
 :root[data-theme='dark'] .toolbar button { color: var(--fg); }
 :root[data-theme='dark'] .toolbar button:hover { background: #23252c; border-color: #374151; }
@@ -147,3 +212,7 @@
   --pre-bg: #f6f8fa;
   --sidebar-bg: #fafafa;
 }
+
+/* --- Typewriter mode --- */
+.wysiwyg-root[data-typewriter='true'] [data-bi] { opacity: 0.25; }
+.wysiwyg-root[data-typewriter='true'] [data-bi][data-active-line] { opacity: 1; }
