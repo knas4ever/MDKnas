@@ -20,6 +20,10 @@
 .wysiwyg-root h4 { font-size: 1.1em; margin: 0.9em 0 0.4em; font-weight: 600; }
 .wysiwyg-root p  { margin: 0.6em 0; }
 .wysiwyg-root blockquote { border-left: 3px solid #d1d5db; margin: 0.8em 0; padding: 0.2em 0.9em; color: #4b5563; }
+/* First/last block inside a quote must not add its own vertical margin,
+   or the quote shows a large unused space at the top/bottom. */
+.wysiwyg-root blockquote > :first-child { margin-top: 0; }
+.wysiwyg-root blockquote > :last-child { margin-bottom: 0; }
 .wysiwyg-root ul, .wysiwyg-root ol { margin: 0.6em 0; padding-left: 1.4em; }
 /* Tailwind preflight strips list markers; restore them. */
 .wysiwyg-root ul { list-style: disc; }
