@@ -1,7 +1,7 @@
 {
   "name": "wysiwyg-md-editor",
   "productName": "Markdown Editor",
-  "version": "0.1.0",
+  "version": "2026.9.22",
   "description": "Offline WYSIWYG Markdown editor",
   "main": "dist-electron/main.js",
   "scripts": {
