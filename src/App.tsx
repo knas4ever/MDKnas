@@ -439,6 +439,12 @@ export default function App() {
               if (t) {
                 t.focus();
                 t.setSelectionRange(pos, pos);
+                // A programmatic selection does not scroll the textarea:
+                // scroll the caret line into view manually.
+                const line = content.slice(0, pos).split('\n').length - 1;
+                const lh = parseFloat(getComputedStyle(t).lineHeight) || 0;
+                const max = t.scrollHeight - t.clientHeight;
+                t.scrollTop = Math.max(0, Math.min(max, line * lh));
               }
             } else {
               editorRef.current?.jumpTo(pos);

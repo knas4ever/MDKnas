@@ -35,6 +35,24 @@ describe('Sidebar', () => {
     expect(screen.getByText('b.md').className).toContain('font-semibold');
   });
 
+  it('starts with folders collapsed and expands on toggle', () => {
+    const tree: FileNode[] = [
+      {
+        name: 'sub',
+        path: '/r/sub',
+        isDir: true,
+        children: [{ name: 'a.md', path: '/r/sub/a.md', isDir: false }]
+      }
+    ];
+    const h = render(<Sidebar {...baseProps} tree={tree} />);
+    const folder = h.getByText(t => t.includes('sub/'));
+    expect(folder).toBeTruthy();
+    // The nested file is hidden while the folder is collapsed.
+    expect(h.queryByText('a.md')).toBeNull();
+    fireEvent.click(folder);
+    expect(h.getByText('a.md')).toBeTruthy();
+  });
+
   it('points to the File menu when no folder is open', () => {
     render(<Sidebar {...baseProps} rootDir={null} />);
     expect(screen.getByText(/No folder open/)).toBeTruthy();

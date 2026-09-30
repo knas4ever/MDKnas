@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FileNode } from '../types';
 
 interface Props {
@@ -30,7 +30,12 @@ export default function FileExplorer({
   ask
 }: Props) {
   const [menuFor, setMenuFor] = useState<string | null>(null);
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  // Folders start collapsed when a folder is opened; the toggle
+  // remembers the user's expansions.
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    setExpanded(new Set());
+  }, [rootDir]);
 
   if (!rootDir) {
     return (
@@ -43,7 +48,7 @@ export default function FileExplorer({
   }
 
   const toggle = (path: string) => {
-    setCollapsed(prev => {
+    setExpanded(prev => {
       const next = new Set(prev);
       if (next.has(path)) next.delete(path);
       else next.add(path);
@@ -94,7 +99,7 @@ export default function FileExplorer({
     nodes.flatMap(n => {
       if (n.isDir) {
         if (!hasMd(n)) return [];
-        const isCollapsed = collapsed.has(n.path);
+        const isExpanded = expanded.has(n.path);
         return [
           <div key={n.path} className="flex items-center gap-1">
             <button
@@ -102,7 +107,7 @@ export default function FileExplorer({
               className="flex-1 text-left"
               style={{ paddingLeft: depth * 14 }}
             >
-              {isCollapsed ? '▸' : '▾'} {n.name}/
+              {isExpanded ? '▾' : '▸'} {n.name}/
             </button>
             <button
               title="Folder actions"
@@ -113,7 +118,7 @@ export default function FileExplorer({
             </button>
             {menuFor === n.path && menuActions(n.path, n.path)}
           </div>,
-          ...(isCollapsed ? [] : renderNodes(n.children ?? [], depth + 1))
+          ...(isExpanded ? renderNodes(n.children ?? [], depth + 1) : [])
         ];
       }
       if (!n.name.toLowerCase().endsWith('.md')) return [];
