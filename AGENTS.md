@@ -3,7 +3,8 @@
 ## Release process
 - Versionsnummer er build-datoen i formatet `ÅÅÅÅ.M.D` (f.eks. `2026.9.22`) i `package.json`
 - Ved udgivelse: opdatér `version`, tilføj et afsnit til `CHANGELOG.md`
-  (sektioner `### Features` og `### Fixes`), kør `npm run dist`, commit + push
+  (sektioner `### Features` og `### Fixes`), kør `npm run dist` (Linux) eller
+  `npm run dist:win` (Windows, output i `release\win-unpacked`), commit + push
 - `CHANGELOG.md` skippes ind i appen (package.json `files`) og vises i
   Help → About — den skal altid være opdateret med hver udgivelse.
 
