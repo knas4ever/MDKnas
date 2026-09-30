@@ -34,6 +34,7 @@ export interface EditorApi {
   saveSettings(s: Settings): Promise<void>;
   listThemes(): Promise<string[]>;
   readTheme(name: string): Promise<string>;
+  getAbout(): Promise<{ name: string; version: string; changelog: string }>;
 }
 
 declare global {

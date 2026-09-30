@@ -109,6 +109,10 @@ function buildMenu(win: BrowserWindow): void {
     {
       label: 'Window',
       submenu: [{ role: 'minimize' }, { role: 'close' }]
+    },
+    {
+      label: 'Help',
+      submenu: [{ label: 'About', click: () => send('about') }]
     }
   ];
   const menu = Menu.buildFromTemplate(template);

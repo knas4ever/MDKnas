@@ -5,6 +5,7 @@ import Sidebar from './components/Sidebar';
 import ThemeManager from './components/ThemeManager';
 import PromptDialog from './components/PromptDialog';
 import TableDialog, { type TableSize } from './components/TableDialog';
+import AboutDialog, { type AboutInfo } from './components/AboutDialog';
 import type { FileNode, Settings } from './types';
 import { applyAction, type EditorAction, type Selection } from './lib/editorActions';
 
@@ -29,6 +30,7 @@ export default function App() {
     defaultValue: string;
   } | null>(null);
   const [tableDialog, setTableDialog] = useState(false);
+  const [about, setAbout] = useState<AboutInfo | null>(null);
   const promptResolve = useRef<((v: string | null) => void) | null>(null);
   const tableResolve = useRef<((s: TableSize | null) => void) | null>(null);
   const undoStack = useRef<{ content: string; selection: Selection }[]>([]);
@@ -387,6 +389,7 @@ export default function App() {
       else if (a === 'redo') doRedo();
       else if (a === 'openFolder') void openFolder();
       else if (a === 'source') setSourceMode(m => !m);
+      else if (a === 'about') void window.api.getAbout().then(setAbout);
       else if (a.startsWith('fmt:')) {
         const action = a.slice(4) as EditorAction;
         if (action === 'link') handleLink();
@@ -538,6 +541,7 @@ export default function App() {
         />
       )}
       {tableDialog && <TableDialog onSubmit={s => finishTable(s)} onCancel={() => finishTable(null)} />}
+      {about && <AboutDialog about={about} onClose={() => setAbout(null)} />}
     </div>
   );
 }

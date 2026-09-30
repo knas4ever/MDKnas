@@ -25,7 +25,12 @@ function mockApi(files: Record<string, string>) {
     loadSettings: vi.fn().mockResolvedValue({ theme: 'light', fontSize: 16, autosaveMs: 100 }),
     saveSettings: vi.fn().mockResolvedValue(undefined),
     listThemes: vi.fn().mockResolvedValue([]),
-    readTheme: vi.fn().mockRejectedValue(new Error('none'))
+    readTheme: vi.fn().mockRejectedValue(new Error('none')),
+    getAbout: vi.fn().mockResolvedValue({
+      name: 'MDKnas',
+      version: '2026.9.22',
+      changelog: '# Changelog\n\n## 2026.9.22\n\n### Features\n- About dialog'
+    })
   };
   return { api, state };
 }
@@ -133,6 +138,30 @@ describe('App', () => {
       watchCb!('rename', 'one.md');
     });
     expect(screen.getByRole('textbox').textContent).toContain('changed on disk');
+  });
+
+  it('Help > About shows version and changelog', async () => {
+    let menuCb: ((action: string) => void) | null = null;
+    const { api } = mockApi({});
+    api.onMenu = vi.fn().mockImplementation((cb: (action: string) => void) => {
+      menuCb = cb;
+      return () => {};
+    });
+    window.api = api;
+    render(<App />);
+    await act(async () => {});
+
+    await act(async () => {
+      menuCb!('about');
+    });
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(screen.getByText('version 2026.9.22')).toBeTruthy();
+    expect(screen.getByText('About dialog')).toBeTruthy();
+
+    const close = screen.getByRole('dialog').querySelector('button') as HTMLElement;
+    fireEvent.click(close);
+    await act(async () => {});
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('outline jump in raw source mode ignores CR of CRLF files', async () => {

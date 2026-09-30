@@ -105,4 +105,15 @@ export function registerIpc(): void {
   ipcMain.handle('themes:read', (_e, name: string) => {
     return fs.readFileSync(path.join(themesDir(), `${name}.css`), 'utf-8');
   });
+  // App identity + changelog for the About dialog. CHANGELOG.md ships
+  // inside the asar (package.json files); missing in dev is not an error.
+  ipcMain.handle('app:about', () => {
+    let changelog = '';
+    try {
+      changelog = fs.readFileSync(path.join(__dirname, '../CHANGELOG.md'), 'utf-8');
+    } catch {
+      changelog = '';
+    }
+    return { name: app.getName(), version: app.getVersion(), changelog };
+  });
 }

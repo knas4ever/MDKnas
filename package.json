@@ -69,7 +69,8 @@
     "files": [
       "dist/**",
       "dist-electron/**",
-      "build/icon.png"
+      "build/icon.png",
+      "CHANGELOG.md"
     ],
     "extraFiles": [
       {

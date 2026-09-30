@@ -43,5 +43,7 @@ contextBridge.exposeInMainWorld('api', {
   loadSettings: (): Promise<unknown> => ipcRenderer.invoke('settings:load'),
   saveSettings: (s: unknown): Promise<void> => ipcRenderer.invoke('settings:save', s),
   listThemes: (): Promise<string[]> => ipcRenderer.invoke('themes:list'),
-  readTheme: (name: string): Promise<string> => ipcRenderer.invoke('themes:read', name)
+  readTheme: (name: string): Promise<string> => ipcRenderer.invoke('themes:read', name),
+  getAbout: (): Promise<{ name: string; version: string; changelog: string }> =>
+    ipcRenderer.invoke('app:about')
 });
