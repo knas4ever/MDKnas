@@ -438,7 +438,10 @@ export default function App() {
               const t = sourceRef.current;
               if (t) {
                 t.focus();
-                t.setSelectionRange(pos, pos);
+                // A textarea normalizes CRLF to LF, so drop the '\r' chars
+                // before pos or the caret drifts right by one per line.
+                const taPos = pos - (content.slice(0, pos).match(/\r/g)?.length ?? 0);
+                t.setSelectionRange(taPos, taPos);
                 // A programmatic selection does not scroll the textarea:
                 // scroll the caret line into view manually.
                 const line = content.slice(0, pos).split('\n').length - 1;

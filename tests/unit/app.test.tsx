@@ -134,4 +134,32 @@ describe('App', () => {
     });
     expect(screen.getByRole('textbox').textContent).toContain('changed on disk');
   });
+
+  it('outline jump in raw source mode ignores CR of CRLF files', async () => {
+    let openCb: ((p: string) => void) | null = null;
+    let menuCb: ((action: string) => void) | null = null;
+    const { api } = mockApi({ '/r/crlf.md': '# One\r\n\r\ntext\r\n\r\n## Two\r\n\r\nmore\r\n\r\n### Three\r\n' });
+    api.onOpenFile = vi.fn().mockImplementation((cb: (p: string) => void) => {
+      openCb = cb;
+      return () => {};
+    });
+    api.onMenu = vi.fn().mockImplementation((cb: (action: string) => void) => {
+      menuCb = cb;
+      return () => {};
+    });
+    window.api = api;
+    render(<App />);
+    await act(async () => {});
+    await act(async () => {
+      openCb!('/r/crlf.md');
+    });
+    await act(async () => {
+      menuCb!('source');
+    });
+    fireEvent.click(screen.getByText('Outline'));
+
+    fireEvent.click(screen.getByText('Three'));
+    const ta = screen.getByRole('textbox') as HTMLTextAreaElement;
+    expect(ta.value.slice(ta.selectionStart)).toMatch(/^Three\n/);
+  });
 });
