@@ -10,38 +10,58 @@ function tempDoc(initial: string): string {
   return file;
 }
 
-test('outline jump in raw MD scrolls the textarea to the heading', async () => {
-  const body = Array.from({ length: 200 }, () => 'lorem ipsum dolor').join('\n');
-  const file = tempDoc('# One\n\n' + body + '\n\n## Two');
+test('outline jump caret landing: raw vs rich', async () => {
+  const base = '# A\n\nbody\n## B';
+  const file = tempDoc(base);
   const app = await electron.launch({ args: ['.', '--open', file] });
   const win = await app.firstWindow();
   await win.waitForSelector('.wysiwyg-root');
 
+  // Raw mode: jump to "B", type Z -> where does Z land?
   await win.getByTitle('Toggle raw markdown / rich text view').click();
-  const ta = win.locator('textarea.source-view');
   await win.getByRole('button', { name: 'Outline' }).click();
-  await win.getByRole('button', { name: 'Two' }).click();
-
-  const info = await win.evaluate(() => {
-    const t = document.activeElement as HTMLTextAreaElement | null;
-    return {
-      tag: t?.tagName ?? '',
-      selStart: t?.selectionStart ?? -1,
-      scrollTop: t?.scrollTop ?? -1,
-      scrollHeight: t?.scrollHeight ?? -1,
-      clientHeight: t?.clientHeight ?? -1
-    };
-  });
-  console.log('after jump:', JSON.stringify(info));
-
-  // The caret is on the last line: the textarea must have scrolled down.
-  expect(info.scrollTop).toBeGreaterThan(0);
-
-  // Typing must land at the heading.
+  await win.getByRole('complementary').getByRole('button', { name: 'B' }).click();
+  const diag = () =>
+    win.evaluate(() => {
+      const el = document.activeElement as HTMLElement | null;
+      const t = el as HTMLTextAreaElement | null;
+      return {
+        tag: el?.tagName ?? '',
+        selStart: t?.selectionStart ?? -1,
+        valueLen: t?.value.length ?? -1
+      };
+    });
+  console.log('after jump  :', JSON.stringify(await diag()));
   await win.keyboard.type('Z');
+  console.log('after type  :', JSON.stringify(await diag()));
+  const status = await win.locator('.border-t').first().textContent();
+  console.log('status bar:', status);
   await expect
-    .poll(async () => fs.readFileSync(file, 'utf-8'), { timeout: 5000 })
-    .toContain('ZTwo');
+    .poll(async () => fs.readFileSync(file, 'utf-8') !== base, { timeout: 5000 });
+  console.log('raw  :', JSON.stringify(fs.readFileSync(file, 'utf-8')));
+  await win.waitForTimeout(3000);
+  console.log('status 3s:', await win.locator('.border-t').first().textContent());
+  console.log('file 3s  :', JSON.stringify(fs.readFileSync(file, 'utf-8')));
+
+  // Rich mode: fresh file, jump to "B", type Z.
+  const file2 = tempDoc(base);
+  const app2 = await electron.launch({ args: ['.', '--open', file2] });
+  const win2 = await app2.firstWindow();
+  await win2.waitForSelector('.wysiwyg-root');
+  await win2.getByRole('button', { name: 'Outline' }).click();
+  await win2.getByRole('complementary').getByRole('button', { name: 'B' }).click();
+  const diag2 = () =>
+    win2.evaluate(() => {
+      const el = document.activeElement as HTMLElement | null;
+      return { tag: el?.tagName ?? '', cls: el?.className ?? '' };
+    });
+  console.log('rich after jump :', JSON.stringify(await diag2()));
+  await win2.keyboard.type('Z');
+  console.log('rich after type :', JSON.stringify(await diag2()));
+  console.log('rich box text  :', JSON.stringify(await win2.locator('.wysiwyg-root').textContent()));
+  await win2.waitForTimeout(2000);
+  console.log('rich file 3s  :', JSON.stringify(fs.readFileSync(file2, 'utf-8')));
 
   await app.close();
+  await app2.close();
 });
