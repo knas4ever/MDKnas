@@ -2,6 +2,21 @@
 
 Version numbers are the build date: `ÅÅÅÅ.M.D`.
 
+## 2026.9.30
+
+### Features
+- **Help → About dialog** — app name, version and the full changelog in a
+  menu dialog. The changelog ships inside the app (package.json `files`) so
+  it stays current with every release.
+- **Windows build** — `npm run dist:win` produces an unpacked, unsigned
+  Windows app in `release/win-unpacked` with `MDKnas.ico`.
+
+### Fixes
+- **Outline jump on CRLF files** — the raw-MD caret drifted right (one
+  character per preceding CRLF line) after jumping to a heading, because a
+  textarea normalizes CRLF to LF. The selection offset now compensates for
+  the '\r' characters.
+
 ## 2026.9.22
 
 ### Features
