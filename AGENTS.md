@@ -11,6 +11,7 @@
 - `npm run lint` — tsc --noEmit
 - `npm run e2e` — build + Playwright (driver Electron via `_electron`)
 - `npm run dist` — build + AppImage/deb (electron-builder)
+- `npm run dist:win` — build + usigneret Windows-app i `release\win-unpacked`
 
 ## Architecture
 - Markdown-kilden er den eneste kilde til sandhed: hver edit producerer en

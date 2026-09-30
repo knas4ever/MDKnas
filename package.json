@@ -15,7 +15,8 @@
     "e2e": "npm run build && playwright test",
     "lint": "tsc --noEmit",
     "typecheck:main": "tsc --noEmit -p tsconfig.main.json",
-    "dist": "npm run build && electron-builder --linux"
+    "dist": "npm run build && electron-builder --linux",
+    "dist:win": "npm run build && electron-builder --win --dir"
   },
   "license": "MIT",
   "devDependencies": {
@@ -59,10 +60,22 @@
       "category": "Utility",
       "maintainer": "knas4ever <knas4ever@gmail.com>"
     },
+    "win": {
+      "signAndEditExecutable": false
+    },
+    "directories": {
+      "output": "release"
+    },
     "files": [
       "dist/**",
       "dist-electron/**",
       "build/icon.png"
+    ],
+    "extraFiles": [
+      {
+        "from": "build/icon.ico",
+        "to": "MDKnas.ico"
+      }
     ]
   },
   "author": {
