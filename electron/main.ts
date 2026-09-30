@@ -1,5 +1,6 @@
 import { app, BrowserWindow, Menu, dialog, ipcMain, shell } from 'electron';
 import path from 'node:path';
+import fs from 'node:fs';
 import { registerIpc } from './ipc';
 import type { MenuItem, MenuItemConstructorOptions } from 'electron';
 
@@ -118,10 +119,16 @@ function buildMenu(win: BrowserWindow): void {
   });
 }
 
+function appIcon(): string | undefined {
+  const iconPath = path.join(__dirname, '../build/icon.png');
+  return fs.existsSync(iconPath) ? iconPath : undefined;
+}
+
 function createWindow(): void {
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
+    icon: appIcon(),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
