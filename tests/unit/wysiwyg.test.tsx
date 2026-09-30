@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import React, { useState } from 'react';
 import { render, fireEvent, cleanup, act } from '@testing-library/react';
 import WysiwygEditor, { WysiwygEditorHandle } from '../../src/components/WysiwygEditor';
+import { domSelectionToSource, type DomSelectionLike } from '../../src/lib/cursor';
 import type { Selection } from '../../src/lib/editorActions';
 
 function typeChar(box: HTMLElement, data: string): void {
@@ -161,6 +162,24 @@ describe('WysiwygEditor', () => {
     fireEvent.click(h.getByRole('link'));
     expect(openExternal).toHaveBeenCalledWith('https://ex.com/');
     w.api = origApi;
+  });
+
+  it('selection prop places the caret at the heading (outline jump)', () => {
+    const ref = React.createRef<WysiwygEditorHandle>();
+    const h = render(
+      <WysiwygEditor
+        content="## Hi\nText"
+        selection={{ start: 3, end: 3 }}
+        onChange={() => {}}
+      />
+    );
+    const root = h.getByRole('textbox');
+    const sel = window.getSelection()!;
+    expect(sel.rangeCount).toBeGreaterThan(0);
+    expect(domSelectionToSource(root, sel as DomSelectionLike)).toEqual({
+      start: 3,
+      end: 3
+    });
   });
 
   it('backspace removes a whole image when the caret is after it', () => {

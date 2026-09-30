@@ -20,6 +20,7 @@ import {
 export interface WysiwygEditorHandle {
   execute(action: EditorAction, arg?: string): void;
   focus(): void;
+  jumpTo(pos: number): void;
 }
 
 interface Props {
@@ -309,6 +310,23 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
       },
       focus: () => {
         rootRef.current?.focus();
+      },
+      // Move the caret to a source position (outline jump) and scroll the
+      // block into view: the programmatic range placement does not scroll
+      // the editor container on its own.
+      jumpTo: (pos: number) => {
+        const root = rootRef.current;
+        if (!root) return;
+        if (!sourceToDomSelection(root, { start: pos, end: pos })) return;
+        root.focus();
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return;
+        const node = sel.getRangeAt(0).startContainer;
+        const el =
+          node.nodeType === Node.ELEMENT_NODE
+            ? (node as HTMLElement)
+            : (node.parentElement ?? root);
+        el.scrollIntoView({ block: 'start' });
       }
     }),
     [content, selection, apply, effectiveSelection]

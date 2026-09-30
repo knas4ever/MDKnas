@@ -347,9 +347,49 @@ export function indent(
   return { content: next, selection: { start: pos, end: pos } };
 }
 
+const ROW_LINE = /^\s*\|/;
+
+// A separator line: every cell between the pipes is dashes/colons only.
+function isSeparatorLine(t: string): boolean {
+  const m = t.match(/^\s*\|(.+)\|\s*$/);
+  if (!m) return false;
+  return m[1].split('|').every(c => /^\s*:?-+:?\s*$/.test(c));
+}
+
+// True when the line belongs to a pipe table block: the run of consecutive
+// row lines containing it has a separator line as its second line.
+function inTableBlock(content: string, line: { start: number; end: number; text: string }): boolean {
+  let s = line.start;
+  while (s > 0) {
+    const prevEnd = s - 1;
+    const prevStart = content.lastIndexOf('\n', prevEnd - 1) + 1;
+    if (!ROW_LINE.test(content.slice(prevStart, prevEnd))) break;
+    s = prevStart;
+  }
+  const nextStart = content.indexOf('\n', s) + 1;
+  const nextEnd = content.indexOf('\n', nextStart);
+  if (nextEnd === -1) return false;
+  return isSeparatorLine(content.slice(nextStart, nextEnd));
+}
+
 export function handleEnter(content: string, sel: Selection): { content: string; selection: Selection } {
   const line = getLine(content, sel.start);
   const text = line.text;
+  // Caret at the end of the LAST row of a pipe table: the renderer parses a
+  // plain line directly after the table as another row, so Enter closes the
+  // table with an extra (unrendered) empty line.
+  if (sel.start === sel.end && sel.end === line.end && ROW_LINE.test(line.text)) {
+    const rest = content.slice(line.end);
+    const nextLine =
+      rest === ''
+        ? ''
+        : rest.slice(1, rest.indexOf('\n', 1) === -1 ? rest.length : rest.indexOf('\n', 1));
+    if (!ROW_LINE.test(nextLine) && inTableBlock(content, line)) {
+      const next = content.slice(0, sel.start) + '\n\n' + content.slice(sel.end);
+      const pos = sel.start + 2;
+      return { content: next, selection: { start: pos, end: pos } };
+    }
+  }
   // An empty line directly below an EMPTY list item visually belongs to that
   // item (its trailing newline renders inside the item), so Enter ends the
   // list by removing the item line.

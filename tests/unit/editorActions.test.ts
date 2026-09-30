@@ -347,6 +347,23 @@ describe('handleEnter', () => {
   it('plain newline', () => {
     expect(handleEnter('ab', S(2, 2)).content).toBe('ab\n');
   });
+  it('closes the table with an extra line at the end of the last row', () => {
+    const t = '| a |\n|---|\n| b |';
+    const r = handleEnter(t, S(17, 17));
+    expect(r.content).toBe(t + '\n\n');
+    expect(r.selection).toEqual(S(19, 19));
+    // Mid-document: the caret lands on the blank line that closes the table.
+    const r2 = handleEnter(t + '\npara', S(17, 17));
+    expect(r2.content).toBe(t + '\n\n\npara');
+    expect(r2.selection).toEqual(S(19, 19));
+  });
+  it('plain Enter inside a table row keeps moving to the next row', () => {
+    const t = '| a |\n|---|\n| b |\n| c |';
+    // End of the separator line (not the last row).
+    expect(handleEnter(t, S(11, 11)).content).toBe(t.slice(0, 11) + '\n' + t.slice(11));
+    // Mid-row caret: a normal split.
+    expect(handleEnter(t, S(15, 15)).content).toBe(t.slice(0, 15) + '\n' + t.slice(15));
+  });
 });
 
 describe('applyAction', () => {

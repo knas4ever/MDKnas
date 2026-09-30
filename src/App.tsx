@@ -23,6 +23,7 @@ export default function App() {
   const [sourceMode, setSourceMode] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>('saved');
   const editorRef = useRef<WysiwygEditorHandle>(null);
+  const sourceRef = useRef<HTMLTextAreaElement>(null);
   const [promptDialog, setPromptDialog] = useState<{
     message: string;
     defaultValue: string;
@@ -427,7 +428,22 @@ export default function App() {
           onRename={renameFile}
           onDelete={deleteFile}
           content={content}
-          onJump={pos => setSelection({ start: pos, end: pos })}
+          onJump={pos => {
+            // Focus the editor and scroll the heading into view: the
+            // selection state re-places the caret via the editor effect, but
+            // without focus the caret is not visible, and the programmatic
+            // placement does not scroll the view.
+            setSelection({ start: pos, end: pos });
+            if (sourceMode) {
+              const t = sourceRef.current;
+              if (t) {
+                t.focus();
+                t.setSelectionRange(pos, pos);
+              }
+            } else {
+              editorRef.current?.jumpTo(pos);
+            }
+          }}
           ask={ask}
         />
         <div className="flex flex-1 flex-col">
@@ -460,6 +476,7 @@ export default function App() {
           <div className="flex-1 overflow-auto">
             {sourceMode ? (
               <textarea
+                ref={sourceRef}
                 className="source-view"
                 aria-label="Raw markdown source"
                 spellCheck={false}
