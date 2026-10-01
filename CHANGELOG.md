@@ -9,7 +9,7 @@ Version numbers are the build date: `ÅÅÅÅ.M.D`.
 ### Fixes
 - **Windows code-block editing** — fenced code blocks in CRLF documents now
   retain exact source offsets on every line, keeping the caret stable while
-  editing.
+  editing and navigating with arrow keys.
 
 ## 2026.9.30
 

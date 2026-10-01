@@ -65,8 +65,10 @@ describe('renderMarkdown', () => {
 
   it('maps CRLF fenced-code lines to their original source positions', () => {
     const html = renderMarkdown('```js\r\nfirst\r\nsecond\r\n```');
-    expect(html).toContain('<span data-s="7" data-e="14">first\r\n</span>');
-    expect(html).toContain('<span data-s="14" data-e="22">second\r\n</span>');
+    expect(html).toContain('<span data-s="7" data-e="12">first</span>');
+    expect(html).toContain('<span data-s="12" data-e="14">\n</span>');
+    expect(html).toContain('<span data-s="14" data-e="20">second</span>');
+    expect(html).toContain('<span data-s="20" data-e="22">\n</span>');
     expect(html).toContain('<span class="src-only"><span data-gap data-s="22" data-e="25">');
   });
 

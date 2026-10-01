@@ -73,7 +73,7 @@ describe('cursor', () => {
     const content = '```js\r\nfirst\r\nsecond\r\n```';
     const root = makeRoot(renderMarkdown(content));
     const secondLine = content.indexOf('second');
-    for (const pos of [content.indexOf('first') + 2, secondLine + 3]) {
+    for (const pos of [content.indexOf('first') + 2, secondLine + 3, secondLine + 4]) {
       expect(sourceToDomSelection(root, { start: pos, end: pos })).toBe(true);
       const sel = window.getSelection()!;
       expect(

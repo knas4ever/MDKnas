@@ -290,7 +290,21 @@ function renderFence(t: Token, starts: number[], content: string, bi: number): s
     while (pos < sourceBody.length) {
       const next = sourceBody.indexOf('\n', pos);
       const end = next === -1 ? sourceBody.length : next + 1;
-      code += textSpan(sourceBody.slice(pos, end), bodyStart + pos, bodyStart + end);
+      const lineEnd =
+        next !== -1 && sourceBody[next - 1] === '\r'
+          ? next - 1
+          : next === -1
+            ? end
+            : next;
+      if (lineEnd > pos) {
+        code += textSpan(sourceBody.slice(pos, lineEnd), bodyStart + pos, bodyStart + lineEnd);
+      }
+      if (next !== -1) {
+        // A single rendered newline covers the CRLF pair. Its endpoints map
+        // before and after the pair, while visible code characters retain
+        // their exact one-to-one source offsets.
+        code += textSpan('\n', bodyStart + lineEnd, bodyStart + end);
+      }
       pos = end;
     }
     code += '</code>';
