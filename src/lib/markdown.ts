@@ -260,29 +260,41 @@ function renderFence(t: Token, starts: number[], content: string, bi: number): s
   const [ls, le] = t.map!;
   const lineText = (i: number): string =>
     content.slice(starts[i], i + 1 < starts.length ? starts[i + 1] - 1 : content.length);
-  const open = lineText(ls).match(/^(\s*)(`{3,}|~{3,})(.*)$/);
-  let s = starts[ls];
-  if (open) {
-    const rest = open[3];
-    s =
-      starts[ls] +
-      open[1].length +
-      open[2].length +
-      (rest.startsWith(' ') ? 1 : 0) +
-      (t.info ? t.info.length : 0);
-  }
+  const open = lineText(ls).replace(/\r$/, '').match(/^(\s*)(`{3,}|~{3,})(.*)$/);
+  const bodyStart = starts[ls + 1] ?? content.length;
+  const closingLine = le - 1;
+  const closing = lineText(closingLine).replace(/\r$/, '');
+  const closingMarker = closing.match(/^\s*(`{3,}|~{3,})\s*$/)?.[1];
+  const hasClosingFence =
+    !!open &&
+    closingLine > ls &&
+    !!closingMarker &&
+    closingMarker[0] === open[2][0] &&
+    closingMarker.length >= open[2].length;
+  const bodyEnd = hasClosingFence ? starts[closingLine] : content.length;
+  const sourceBody = content.slice(bodyStart, bodyEnd);
   const body = t.content;
-  // The fence content starts AFTER the opening fence line's newline
-  // (markdown-it's `content` begins at the first content character).
-  const bodyStart = Math.min(s + 1, content.length);
-  const bodyEnd = bodyStart + body.length;
   const blockEnd = le < starts.length ? starts[le] : content.length;
   const head = bodyStart > starts[ls] ? gapSpan(starts[ls], bodyStart, true) : '';
   const tail = gapSpan(bodyEnd, blockEnd);
   const lang = t.info || '';
   let code: string;
   let cls = '';
-  if (lang && hljs.getLanguage(lang)) {
+  if (sourceBody.includes('\r\n')) {
+    // HTML normalizes CRLF text nodes to LF. Keep each physical source line
+    // in its own span so the omitted CR never shifts following caret offsets.
+    // Highlight.js output cannot be safely split at line boundaries because
+    // syntax spans may cross them, so prioritize exact editing positions.
+    let pos = 0;
+    code = '<code>';
+    while (pos < sourceBody.length) {
+      const next = sourceBody.indexOf('\n', pos);
+      const end = next === -1 ? sourceBody.length : next + 1;
+      code += textSpan(sourceBody.slice(pos, end), bodyStart + pos, bodyStart + end);
+      pos = end;
+    }
+    code += '</code>';
+  } else if (lang && hljs.getLanguage(lang)) {
     code = hljs.highlight(body, { language: lang, ignoreIllegals: true }).value;
     cls = ` class="language-${lang}"`;
   } else {
@@ -293,6 +305,8 @@ function renderFence(t: Token, starts: number[], content: string, bi: number): s
   const span =
     body === ''
       ? `<span data-s="${bodyStart}" data-e="${bodyStart}"><code>\u00a0</code></span>`
+      : sourceBody.includes('\r\n')
+        ? code
       : `<span data-s="${bodyStart}" data-e="${bodyEnd}"><code>${code}</code></span>`;
   // The fence markers (head/tail gaps) stay in the DOM for source mapping,
   // but are hidden: visible lines inside <pre> must be content only, so

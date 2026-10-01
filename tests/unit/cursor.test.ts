@@ -69,6 +69,24 @@ describe('cursor', () => {
     expect(sel.anchorOffset).toBe(2);
   });
 
+  it('round-trips a caret on every CRLF fenced-code line', () => {
+    const content = '```js\r\nfirst\r\nsecond\r\n```';
+    const root = makeRoot(renderMarkdown(content));
+    const secondLine = content.indexOf('second');
+    for (const pos of [content.indexOf('first') + 2, secondLine + 3]) {
+      expect(sourceToDomSelection(root, { start: pos, end: pos })).toBe(true);
+      const sel = window.getSelection()!;
+      expect(
+        domSelectionToSource(root, {
+          anchorNode: sel.anchorNode!,
+          anchorOffset: sel.anchorOffset,
+          focusNode: sel.focusNode!,
+          focusOffset: sel.focusOffset
+        })
+      ).toEqual({ start: pos, end: pos });
+    }
+  });
+
   it('element anchors inside a table cell skip leading gap spans', () => {
     const root = makeRoot(
       '<table><tr><td><span data-gap data-s="0" data-e="5">' +

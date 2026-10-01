@@ -63,6 +63,13 @@ describe('renderMarkdown', () => {
     expect(html).toContain('<span data-s="6" data-e="16">');
   });
 
+  it('maps CRLF fenced-code lines to their original source positions', () => {
+    const html = renderMarkdown('```js\r\nfirst\r\nsecond\r\n```');
+    expect(html).toContain('<span data-s="7" data-e="14">first\r\n</span>');
+    expect(html).toContain('<span data-s="14" data-e="22">second\r\n</span>');
+    expect(html).toContain('<span class="src-only"><span data-gap data-s="22" data-e="25">');
+  });
+
   it('renders an nbsp anchor in empty table cells', () => {
     const html = renderMarkdown('| a | b |\n|---|---|\n|  |  |');
     expect(html).toContain('<td><span data-gap data-s="7" data-e="21">');
