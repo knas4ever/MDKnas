@@ -14,6 +14,9 @@ Version numbers are the build date: `ÅÅÅÅ.M.D`.
   of the preceding text instead of jumping to the top of the document.
 - **Entering code blocks with Right Arrow** — the caret now enters at the
   first editable code character instead of jumping to the document start.
+- **Opening files from Explorer** — launching MDKnas through a `.md` file
+  association now opens the clicked file instead of restoring only the last
+  folder.
 
 ## 2026.9.30
 

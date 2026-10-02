@@ -11,10 +11,37 @@ ipcMain.handle('app:openExternal', (_event, url: string) => {
 });
 
 const isDev = process.argv.includes('--dev');
-const openIdx = process.argv.indexOf('--open');
-const openPath = openIdx !== -1 ? process.argv[openIdx + 1] : null;
 const openFolderIdx = process.argv.indexOf('--open-folder');
 const openFolderDir = openFolderIdx !== -1 ? process.argv[openFolderIdx + 1] : null;
+const openIdx = process.argv.indexOf('--open');
+
+function filePathFromArgs(argv: string[]): string | null {
+  const explicitIdx = argv.indexOf('--open');
+  if (explicitIdx !== -1 && argv[explicitIdx + 1]) return path.resolve(argv[explicitIdx + 1]);
+  for (let i = 1; i < argv.length; i++) {
+    if (i === explicitIdx + 1 || argv[i].startsWith('-')) continue;
+    try {
+      if (fs.statSync(argv[i]).isFile()) return path.resolve(argv[i]);
+    } catch {
+      // Chromium and Electron flags are not paths; only existing files are
+      // candidates from an Explorer file-association launch.
+    }
+  }
+  return null;
+}
+
+let pendingOpenPath = filePathFromArgs(process.argv);
+let mainWindow: BrowserWindow | null = null;
+
+function openFileInWindow(filePath: string): void {
+  pendingOpenPath = filePath;
+  const win = mainWindow;
+  if (!win || win.isDestroyed() || win.webContents.isLoading()) return;
+  win.show();
+  win.focus();
+  win.webContents.send('app:open-file', filePath);
+  pendingOpenPath = null;
+}
 
 function findMenuItem(items: MenuItem[], label: string): MenuItem | null {
   for (const item of items) {
@@ -140,6 +167,10 @@ function createWindow(): void {
       sandbox: true
     }
   });
+  mainWindow = win;
+  win.on('closed', () => {
+    if (mainWindow === win) mainWindow = null;
+  });
   buildMenu(win);
   if (isDev) {
     win.loadURL('http://127.0.0.1:5173');
@@ -150,8 +181,9 @@ function createWindow(): void {
     if (process.argv.includes('--smoke')) {
       app.exit(0);
     }
-    if (openPath) {
-      win.webContents.send('app:open-file', openPath);
+    if (pendingOpenPath) {
+      win.webContents.send('app:open-file', pendingOpenPath);
+      pendingOpenPath = null;
     }
     if (openFolderDir) {
       win.webContents.send('app:open-folder', openFolderDir);
@@ -159,10 +191,21 @@ function createWindow(): void {
   });
 }
 
-app.whenReady().then(() => {
-  registerIpc();
-  createWindow();
-});
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+
+if (!hasSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (_event, argv) => {
+    const filePath = filePathFromArgs(argv);
+    if (filePath) openFileInWindow(filePath);
+  });
+
+  app.whenReady().then(() => {
+    registerIpc();
+    createWindow();
+  });
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();

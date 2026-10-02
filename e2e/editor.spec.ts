@@ -28,6 +28,17 @@ test('opens a file and renders live preview', async () => {
   await app.close();
 });
 
+test('opens an Explorer-associated markdown file argument', async () => {
+  const file = tempDoc('# Explorer file');
+  const app = await electron.launch({ args: ['.', file] });
+  const win = await app.firstWindow();
+  await win.waitForSelector('.wysiwyg-root');
+
+  await expect(win.locator('.wysiwyg-root h1')).toHaveText('Explorer file');
+
+  await app.close();
+});
+
 test('bold shortcut wraps the selection', async () => {
   const file = tempDoc('plain text');
   const app = await electron.launch({ args: ['.', '--open', file] });
