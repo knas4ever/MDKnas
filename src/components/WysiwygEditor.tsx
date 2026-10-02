@@ -279,6 +279,7 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
   const [imgVersion, setImgVersion] = useState(0);
   const retryTick = useRef<(() => void) | null>(null);
   const processSelectionRef = useRef<() => void>(() => {});
+  const verticalColumnRef = useRef<number | null>(null);
   // Right-click context menu on a table: add/remove rows and columns.
   const [tableMenu, setTableMenu] = useState<{
     x: number;
@@ -481,6 +482,7 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
   useEffect(() => {
     const onDown = () => {
       draggingRef.current = true;
+      verticalColumnRef.current = null;
     };
     const onUp = () => {
       const wasDragging = draggingRef.current;
@@ -655,6 +657,7 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (composing.current) return;
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') verticalColumnRef.current = null;
     if (e.ctrlKey || e.metaKey) {
       const k = e.key.toLowerCase();
       const action = e.shiftKey ? SHORTCUTS_SHIFT[k] : SHORTCUTS_PLAIN[k];
@@ -764,7 +767,7 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
         // VISUAL line (real text or an internal blank line) instead of the
         // unit rect. A blank-line unit is a single line, so it is always on
         // its boundary.
-        if (!use.hasAttribute('data-blank-line')) {
+        if (!use.hasAttribute('data-blank-line') && use.tagName !== 'LI') {
           const refRect = boundaryRectOf(use, !down);
           if (!refRect) return;
           const onBoundaryLine = down ? cr.bottom >= refRect.bottom - 4 : cr.top <= refRect.top + 4;
@@ -774,19 +777,6 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
         if (!target) return;
         const leaf = leafOf(target, down);
         if (!leaf) return;
-        e.preventDefault();
-        if (leaf.hasAttribute('data-blank-line')) {
-          // Land on the blank line itself (its nbsp span's source position).
-          const span = leaf.querySelector('span');
-          const src = Number(span?.getAttribute('data-s') ?? 0);
-          apply({ content, selection: { start: src, end: src } });
-          return;
-        }
-        const tn = realTextNodeOf(leaf, down);
-        if (!tn) return;
-        // Keep the horizontal position relative to the editable text
-        // column. Lists and task items are indented, so an absolute screen x
-        // would move the caret right every time it crossed their boundary.
         const current =
           range.startContainer.nodeType === Node.TEXT_NODE &&
           range.startContainer.parentElement?.getAttribute('data-gap') == null
@@ -799,14 +789,30 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
             : current
               ? charOffsetAtX(current, cr.left)
               : 0;
+        const preferredOffset = verticalColumnRef.current ?? currentOffset;
+        e.preventDefault();
+        if (leaf.hasAttribute('data-blank-line')) {
+          // Land on the blank line itself (its nbsp span's source position).
+          const span = leaf.querySelector('span');
+          const src = Number(span?.getAttribute('data-s') ?? 0);
+          verticalColumnRef.current = preferredOffset;
+          apply({ content, selection: { start: src, end: src } });
+          return;
+        }
+        const tn = realTextNodeOf(leaf, down);
+        if (!tn) return;
+        // Keep the horizontal position relative to the editable text
+        // column. Lists and task items are indented, so an absolute screen x
+        // would move the caret right every time it crossed their boundary.
         const targetLeft = rectOfText(tn).left;
         const targetOffset =
-          Math.abs(targetLeft - currentLeft) > 1
-            ? Math.min(currentOffset, (tn.nodeValue ?? '').length)
+          use.hasAttribute('data-blank-line') || Math.abs(targetLeft - currentLeft) > 1
+            ? Math.min(preferredOffset, (tn.nodeValue ?? '').length)
             : charOffsetAtX(tn, targetLeft + Math.max(0, cr.left - currentLeft));
         const span = tn.parentElement;
         const srcStart = Number(span?.getAttribute('data-s') ?? 0);
         const pos = srcStart + targetOffset;
+        verticalColumnRef.current = preferredOffset;
         apply({ content, selection: { start: pos, end: pos } });
         return;
       }
