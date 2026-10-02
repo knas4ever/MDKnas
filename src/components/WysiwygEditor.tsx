@@ -170,6 +170,23 @@ function realTextNodeOf(block: HTMLElement, first: boolean): Text | null {
   return (node as Text | null) ?? null;
 }
 
+function precedingEditableSourceEnd(root: HTMLElement, block: HTMLElement): number | null {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let end: number | null = null;
+  let node: Node | null;
+  while ((node = walker.nextNode()) !== null) {
+    const text = node as Text;
+    if (block.contains(text)) break;
+    if (!(text.nodeValue ?? '').length) continue;
+    const parent = text.parentElement;
+    if (parent?.closest('.src-only') || parent?.getAttribute('data-gap') != null) continue;
+    const span = parent?.closest<HTMLElement>('[data-s]');
+    const value = Number(span?.dataset.e ?? '-1');
+    if (Number.isInteger(value) && value >= 0) end = value;
+  }
+  return end;
+}
+
 function rectOfText(node: Text): DOMRect {
   const r = document.createRange();
   r.setStart(node, 0);
@@ -669,6 +686,27 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
         e.preventDefault();
         apply(handleEnter(content, selection));
         return;
+      case 'ArrowLeft': {
+        if (e.shiftKey || e.altKey) return;
+        const root = rootRef.current;
+        const sel = window.getSelection();
+        if (!root || !sel || sel.rangeCount === 0) return;
+        const range = sel.getRangeAt(0);
+        if (!range.collapsed) return;
+        const pre =
+          range.startContainer.nodeType === Node.ELEMENT_NODE
+            ? (range.startContainer as Element).closest('pre')
+            : range.startContainer.parentElement?.closest('pre');
+        if (!pre) return;
+        const first = realTextNodeOf(pre as HTMLElement, true);
+        if (range.startContainer !== first || range.startOffset !== 0) return;
+        const block = (pre.closest('.codeblock') ?? pre) as HTMLElement;
+        const pos = precedingEditableSourceEnd(root, block);
+        if (pos === null) return;
+        e.preventDefault();
+        apply({ content, selection: { start: pos, end: pos } });
+        return;
+      }
       case 'ArrowDown':
       case 'ArrowUp': {
         if (e.shiftKey || e.altKey) return; // let the browser select

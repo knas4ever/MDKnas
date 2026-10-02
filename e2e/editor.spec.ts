@@ -366,6 +366,32 @@ test('typing inside a highlighted CRLF code block keeps the caret on the selecte
   await app.close();
 });
 
+test('left arrow from a code block returns to the preceding text', async () => {
+  const file = tempDoc('before\r\n\r\n```bash\r\ncd ~/apps\r\n```\r\n\r\nafter');
+  const app = await electron.launch({ args: ['.', '--open', file] });
+  const win = await app.firstWindow();
+  await win.waitForSelector('.wysiwyg-root');
+  await win.waitForTimeout(1500);
+
+  const caret = await win.locator('.wysiwyg-root').evaluate(el => {
+    const text = el.querySelector<HTMLElement>('pre span[data-s="19"]')!.firstChild!;
+    const range = document.createRange();
+    range.setStart(text, 0);
+    range.collapse(true);
+    const rect = range.getBoundingClientRect();
+    return { x: rect.left + 1, y: rect.top + rect.height / 2 };
+  });
+  await win.mouse.click(caret.x, caret.y);
+  await win.keyboard.press('ArrowLeft');
+  await win.keyboard.type('X');
+
+  await expect
+    .poll(async () => fs.readFileSync(file, 'utf-8'), { timeout: 5000 })
+    .toBe('beforeX\r\n\r\n```bash\r\ncd ~/apps\r\n```\r\n\r\nafter');
+
+  await app.close();
+});
+
 test('pasting text persists in the document', async () => {
   const file = tempDoc('start');
   const app = await electron.launch({ args: ['.', '--open', file] });

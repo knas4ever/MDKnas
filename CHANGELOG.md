@@ -10,6 +10,8 @@ Version numbers are the build date: `ÅÅÅÅ.M.D`.
 - **Windows code-block editing** — fenced code blocks in CRLF documents now
   retain exact source offsets on every line, keeping the caret stable while
   editing and navigating with arrow keys, including syntax-highlighted code.
+- **Leaving code blocks with Left Arrow** — the caret now returns to the end
+  of the preceding text instead of jumping to the top of the document.
 
 ## 2026.9.30
 
