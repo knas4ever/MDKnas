@@ -29,6 +29,31 @@ const caretInfo = (win: any) => win.evaluate(() => {
   };
 });
 
+test('down into a wrapped item enters its first visual line', async () => {
+  const long = 'lorem ipsum dolor sit amet catnip dolor sit amet lorem ipsum dolor sit amet catnip dolor sit amet lorem ipsum dolor sit amet catnip dolor sit amet lorem ipsum dolor sit amet catnip dolor sit amet lorem ipsum dolor sit amet catnip dolor';
+  const file = tempDoc(`- first item\n- ${long}\n`);
+  const app = await launch(file);
+  const win = await app.firstWindow();
+  await win.waitForSelector('.wysiwyg-root');
+  await win.waitForTimeout(500);
+  const a = await win.evaluate(() => {
+    const span = document.querySelector('li span:not([data-gap])') as HTMLElement;
+    const b = span.getBoundingClientRect();
+    return { x: b.left + 20, y: b.top + 5 };
+  });
+  await win.mouse.click(a.x, a.y);
+  await win.waitForTimeout(300);
+  const c0 = await caretInfo(win);
+  await win.keyboard.press('ArrowDown');
+  await win.waitForTimeout(250);
+  const c1 = await caretInfo(win);
+  console.log('DOWN-INTO-WRAP:', JSON.stringify([c0, c1]));
+  // Entered on the item's first line, at the caret's column
+  expect(c1.s !== c0.s).toBe(true);
+  expect(c1.o).toBeLessThan(10);
+  await app.close();
+});
+
 test('three-line wrapped item: Down stays inside it twice', async () => {
   const long = 'lorem ipsum dolor sit amet catnip dolor sit amet lorem ipsum dolor sit amet catnip dolor sit amet lorem ipsum dolor sit amet catnip dolor sit amet lorem ipsum dolor sit amet catnip dolor sit amet lorem ipsum dolor sit amet catnip dolor sit amet lorem ipsum dolor sit amet catnip dolor';
   const file = tempDoc(`- ${long}\n- next item\n`);
@@ -103,9 +128,16 @@ test('wrapped list item: ArrowDown steps to the next visual line', async () => {
   console.log('DOWN2:', JSON.stringify(c3));
   expect(c3.s !== c0.s).toBe(true);
 
-  // Typing on the wrapped continuation line edits inside the long item.
+  // Going up into a wrapped item must land on its last visual line, not on
+  // the first character of the item.
   await win.keyboard.press('ArrowUp');
   await win.waitForTimeout(250);
+  const up2 = await caretInfo(win);
+  console.log('UP-INTO-WRAP:', JSON.stringify(up2));
+  expect(up2.s).toBe(c0.s);
+  expect(up2.o).toBeGreaterThan(50);
+
+  // Typing on the wrapped continuation line edits inside the long item.
   await win.keyboard.type('X');
   await win.keyboard.press('Control+s');
   await win.waitForTimeout(700);

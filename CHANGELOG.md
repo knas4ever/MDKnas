@@ -10,7 +10,9 @@ Version numbers are the build date: `ÅÅÅÅ.M.D`.
 - **Up/Down in wrapped list items** — a long item that wraps over several
   lines is now stepped through one visual line per press; only the item's
   first/last line crosses to the neighbouring item, instead of every press
-  jumping to the next item.
+  jumping to the next item. Entering a wrapped item lands on the line it
+  actually shows (the last one when moving up) at the caret's column,
+  instead of the item's first character.
 - **Stepping out of styled text** — one Right (or Left on the other side) now
   passes the whole emphasis marker: after bolding a selection, a single Right
   leaves `**word**`, and with bold+italic it leaves `***word***` too, instead

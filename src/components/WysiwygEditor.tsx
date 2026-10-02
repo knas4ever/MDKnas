@@ -197,16 +197,64 @@ function realTextNodes(block: HTMLElement): Text[] {
   return nodes;
 }
 
-// The real text nodes sharing one visual line box: `node`'s line when given,
-// otherwise the block's first (or last) line. Column is measured from the
-// left edge of the line the caret actually sits on, so wrapped blocks and
-// indented lists keep their logical column when the caret crosses.
-function lineNodes(block: HTMLElement, first: boolean, node: Text | null): Text[] {
-  const nodes = realTextNodes(block);
-  if (!nodes.length) return [];
-  const anchor = node && nodes.some((t) => t === node) ? node : (first ? nodes[0] : nodes[nodes.length - 1]);
-  const top = rectOfText(anchor).top;
-  return nodes.filter((t) => Math.abs(rectOfText(t).top - top) < 3);
+// The rect of a collapsed caret at an offset inside a text node. A range
+// rect unions every line a wrapped node spans, while a collapsed caret stays
+// on the single visual line the offset belongs to.
+function caretRect(node: Text, offset: number): DOMRect {
+  const len = (node.nodeValue ?? '').length;
+  const at = Math.max(0, Math.min(offset, len));
+  const r = document.createRange();
+  r.setStart(node, at);
+  r.setEnd(node, at);
+  return r.getBoundingClientRect();
+}
+
+// The first and last offset of a node whose caret sits on the visual line at
+// `top`, or null when the node has no fragment there. Caret tops are
+// non-decreasing with the offset, so both edges binary-search.
+function offsetsOnLine(node: Text, top: number): { from: number; to: number } | null {
+  const len = (node.nodeValue ?? '').length;
+  const topAt = (i: number) => caretRect(node, i).top;
+  let lo = 0;
+  let hi = len;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (topAt(mid) >= top - 1) hi = mid;
+    else lo = mid + 1;
+  }
+  const from = lo;
+  lo = 0;
+  hi = len;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (topAt(mid) <= top + 1) lo = mid + 1;
+    else hi = mid;
+  }
+  const to = lo - 1;
+  return from <= to ? { from, to } : null;
+}
+
+// The real text nodes of a block that have a fragment on the visual line at
+// `top`, with the offsets each one covers there.
+function lineFragments(block: HTMLElement, top: number): Array<{ node: Text; from: number; to: number }> {
+  const out: Array<{ node: Text; from: number; to: number }> = [];
+  for (const n of realTextNodes(block)) {
+    const f = offsetsOnLine(n, top);
+    if (f) out.push({ node: n, from: f.from, to: f.to });
+  }
+  return out;
+}
+
+// The offset in [from, to] whose caret x is closest to x.
+function offsetAtX(node: Text, from: number, to: number, x: number): number {
+  let lo = from;
+  let hi = to;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (caretRect(node, mid).left >= x) hi = mid;
+    else lo = mid + 1;
+  }
+  return lo;
 }
 
 // The first (or last) real text node of a block: editable text, skipping
@@ -267,23 +315,6 @@ function rectOfText(node: Text): DOMRect {
   r.setStart(node, 0);
   r.setEnd(node, (node.nodeValue ?? '').length);
   return r.getBoundingClientRect();
-}
-
-// The character offset whose rendered caret x is closest to x (pixel-exact,
-// binary search over prefix rects — avoids sub-pixel fraction drift).
-function charOffsetAtX(node: Text, x: number): number {
-  const len = (node.nodeValue ?? '').length;
-  let lo = 0;
-  let hi = len;
-  while (lo < hi) {
-    const mid = (lo + hi) >> 1;
-    const r = document.createRange();
-    r.setStart(node, 0);
-    r.setEnd(node, mid);
-    if (r.getBoundingClientRect().right >= x) hi = mid;
-    else lo = mid + 1;
-  }
-  return lo;
 }
 
 // Rect of the unit's first or last VISUAL line, counting real text lines
@@ -880,11 +911,11 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
         // visual line it sits on. A line-relative column (not an absolute
         // screen x) is what survives crossing indented blocks: list markers,
         // task checkboxes and headings all shift the text column.
-        const caretLine = lineNodes(use, !down, current);
-        const currentLeft = caretLine.length
-          ? Math.min(...caretLine.map((t) => rectOfText(t).left))
+        const caretFrags = lineFragments(use, cr.top);
+        const currentLeft = caretFrags.length
+          ? Math.min(...caretFrags.map((f) => caretRect(f.node, f.from).left))
           : current
-            ? rectOfText(current).left
+            ? caretRect(current, 0).left
             : cr.left;
         const columnPx =
           verticalColumnRef.current ?? Math.max(0, cr.left - currentLeft);
@@ -898,25 +929,32 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
           return;
         }
         // The target's first (down) or last (up) visual line: every text
-        // span on that line is a candidate, so a caret right of inline
+        // fragment on that line is a candidate, so a caret right of inline
         // markup (bold, code, links) stays right of it instead of clipping
-        // into the leading span.
-        const targetLine = lineNodes(leaf, down, null);
-        if (!targetLine.length) return;
-        const targetLeft = Math.min(...targetLine.map((t) => rectOfText(t).left));
+        // into the leading span, and a wrapped item is entered on the line
+        // it actually shows instead of its first one.
+        const targetNodes = realTextNodes(leaf);
+        if (!targetNodes.length) return;
+        const lastTarget = targetNodes[targetNodes.length - 1];
+        const targetTop = down
+          ? caretRect(targetNodes[0], 0).top
+          : caretRect(lastTarget, (lastTarget.nodeValue ?? '').length).top;
+        const targetFrags = lineFragments(leaf, targetTop);
+        if (!targetFrags.length) return;
+        const targetLeft = Math.min(...targetFrags.map((f) => caretRect(f.node, f.from).left));
         const targetX = targetLeft + columnPx;
-        let tn = targetLine[targetLine.length - 1];
-        for (const t of targetLine) {
-          if (targetX <= rectOfText(t).right) {
-            tn = t;
+        let chosen = targetFrags[targetFrags.length - 1];
+        for (const f of targetFrags) {
+          if (targetX <= caretRect(f.node, f.to).right) {
+            chosen = f;
             break;
           }
         }
-        const targetOffset = charOffsetAtX(tn, targetX);
-        const span = tn.parentElement?.closest('[data-s]');
+        const targetOffset = offsetAtX(chosen.node, chosen.from, chosen.to, targetX);
+        const span = chosen.node.parentElement?.closest('[data-s]');
         const srcStart = Number(span?.getAttribute('data-s') ?? 0);
         const srcEnd = Number(span?.getAttribute('data-e') ?? srcStart);
-        const textLen = (tn.nodeValue ?? '').length;
+        const textLen = (chosen.node.nodeValue ?? '').length;
         // Spans whose rendered text is shorter than their source range
         // (math, image alt) map proportionally, like cursor.ts.
         const pos =
