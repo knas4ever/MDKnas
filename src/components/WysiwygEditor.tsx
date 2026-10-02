@@ -784,11 +784,29 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
         }
         const tn = realTextNodeOf(leaf, down);
         if (!tn) return;
-        // Keep the horizontal position: the character of the target line
-        // whose rendered x matches the caret's x.
+        // Keep the horizontal position relative to the editable text
+        // column. Lists and task items are indented, so an absolute screen x
+        // would move the caret right every time it crossed their boundary.
+        const current =
+          range.startContainer.nodeType === Node.TEXT_NODE &&
+          range.startContainer.parentElement?.getAttribute('data-gap') == null
+            ? (range.startContainer as Text)
+            : realTextNodeOf(use, !down);
+        const currentLeft = current ? rectOfText(current).left : cr.left;
+        const currentOffset =
+          current && range.startContainer === current
+            ? range.startOffset
+            : current
+              ? charOffsetAtX(current, cr.left)
+              : 0;
+        const targetLeft = rectOfText(tn).left;
+        const targetOffset =
+          Math.abs(targetLeft - currentLeft) > 1
+            ? Math.min(currentOffset, (tn.nodeValue ?? '').length)
+            : charOffsetAtX(tn, targetLeft + Math.max(0, cr.left - currentLeft));
         const span = tn.parentElement;
         const srcStart = Number(span?.getAttribute('data-s') ?? 0);
-        const pos = srcStart + charOffsetAtX(tn, cr.left);
+        const pos = srcStart + targetOffset;
         apply({ content, selection: { start: pos, end: pos } });
         return;
       }

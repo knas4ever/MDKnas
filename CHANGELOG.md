@@ -17,6 +17,8 @@ Version numbers are the build date: `ÅÅÅÅ.M.D`.
 - **Opening files from Explorer** — launching MDKnas through a `.md` file
   association now opens the clicked file instead of restoring only the last
   folder.
+- **Vertical movement across lists** — moving between headings and indented
+  list or task text with Up/Down now preserves the caret column.
 
 ## 2026.9.30
 

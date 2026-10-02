@@ -255,6 +255,35 @@ test('numbered list marks every line of a multi-line selection', async () => {
   await app.close();
 });
 
+test('vertical movement between a heading and indented list text preserves the column', async () => {
+  const list = '- [ ] item';
+  const file = tempDoc(`## Heading\n${list}`);
+  const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'mdeditor-profile-'));
+  const app = await electron.launch({ args: ['.', '--open', file, `--user-data-dir=${profile}`] });
+  const win = await app.firstWindow();
+  await win.waitForSelector('.wysiwyg-root');
+  await win.waitForTimeout(1000);
+
+  await win.locator('.wysiwyg-root').evaluate(el => {
+    const text = el.querySelector<HTMLElement>('h2 span[data-s="3"]')!.firstChild!;
+    const range = document.createRange();
+    range.setStart(text, 2);
+    range.collapse(true);
+    const selection = window.getSelection()!;
+    selection.removeAllRanges();
+    selection.addRange(range);
+  });
+  await win.keyboard.press('ArrowDown');
+  await win.keyboard.press('ArrowUp');
+  await win.keyboard.type('X');
+
+  await expect
+    .poll(async () => fs.readFileSync(file, 'utf-8'), { timeout: 5000 })
+    .toBe(`## HeXading\n${list}`);
+
+  await app.close();
+});
+
 test('starting without a file gives an untitled document and Ctrl+N clears it', async () => {
   const app = await electron.launch({ args: ['.'] });
   const win = await app.firstWindow();
