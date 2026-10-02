@@ -60,7 +60,8 @@ describe('renderMarkdown', () => {
     expect(html).toContain('<div class="codeblock" data-bi="0">');
     expect(html).toContain('class="code-copy"');
     expect(html).toContain('<pre class="language-js">');
-    expect(html).toContain('<span data-s="6" data-e="16">');
+    expect(html).toContain('<span class="hljs-keyword"><span data-s="6" data-e="9">let</span></span>');
+    expect(html).toContain('<span class="hljs-number"><span data-s="14" data-e="15">1</span></span>');
   });
 
   it('maps CRLF fenced-code lines to their original source positions', () => {

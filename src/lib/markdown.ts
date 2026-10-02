@@ -256,6 +256,59 @@ function cellLayout(line: string): CellLayout {
   return { starts, ends };
 }
 
+// Highlight.js splits code into syntax-token text nodes. Each needs its own
+// source range: assigning the whole block range to every token makes clicks
+// and arrow moves map to unrelated source offsets. CRLF source newlines are
+// rendered as one LF, so they remain their own two-source-character span.
+function sourceOffsetCode(html: string, source: string, sourceStart: number): string {
+  const tokens = html.match(/<[^>]*>|&(amp|lt|gt);|[^<&]+|[<&]/g) ?? [];
+  let sourcePos = 0;
+  let textStart = 0;
+  let text = '';
+  let out = '';
+  const flush = (): void => {
+    if (text) {
+      out += `<span data-s="${sourceStart + textStart}" data-e="${sourceStart + sourcePos}">${text}</span>`;
+      text = '';
+    }
+  };
+  const sourceEnd = (ch: string): number => {
+    if (ch === '\n' && source.slice(sourcePos, sourcePos + 2) === '\r\n') {
+      return sourcePos + 2;
+    }
+    return sourcePos + ch.length;
+  };
+
+  for (const token of tokens) {
+    if (token.startsWith('<') && token.endsWith('>')) {
+      flush();
+      out += token;
+      continue;
+    }
+    const parts = token.match(/&(amp|lt|gt);|[^&]+|&/g) ?? [];
+    for (const part of parts) {
+      const ch = part === '&amp;' ? '&' : part === '&lt;' ? '<' : part === '&gt;' ? '>' : part;
+      for (let i = 0; i < ch.length; i++) {
+        const unit = ch[i];
+        const raw = part.length === 1 || ch.length > 1 ? unit : part;
+        if (unit === '\n') {
+          flush();
+          const end = sourceEnd(unit);
+          out += `<span data-s="${sourceStart + sourcePos}" data-e="${sourceStart + end}">${raw}</span>`;
+          sourcePos = end;
+          textStart = sourcePos;
+        } else {
+          if (!text) textStart = sourcePos;
+          text += raw;
+          sourcePos = sourceEnd(unit);
+        }
+      }
+    }
+  }
+  flush();
+  return out;
+}
+
 function renderFence(t: Token, starts: number[], content: string, bi: number): string {
   const [ls, le] = t.map!;
   const lineText = (i: number): string =>
@@ -273,55 +326,26 @@ function renderFence(t: Token, starts: number[], content: string, bi: number): s
     closingMarker.length >= open[2].length;
   const bodyEnd = hasClosingFence ? starts[closingLine] : content.length;
   const sourceBody = content.slice(bodyStart, bodyEnd);
-  const body = t.content;
   const blockEnd = le < starts.length ? starts[le] : content.length;
   const head = bodyStart > starts[ls] ? gapSpan(starts[ls], bodyStart, true) : '';
   const tail = gapSpan(bodyEnd, blockEnd);
   const lang = t.info || '';
-  let code: string;
+  const displayBody = sourceBody.replace(/\r\n/g, '\n');
+  let highlighted: string;
   let cls = '';
-  if (sourceBody.includes('\r\n')) {
-    // HTML normalizes CRLF text nodes to LF. Keep each physical source line
-    // in its own span so the omitted CR never shifts following caret offsets.
-    // Highlight.js output cannot be safely split at line boundaries because
-    // syntax spans may cross them, so prioritize exact editing positions.
-    let pos = 0;
-    code = '<code>';
-    while (pos < sourceBody.length) {
-      const next = sourceBody.indexOf('\n', pos);
-      const end = next === -1 ? sourceBody.length : next + 1;
-      const lineEnd =
-        next !== -1 && sourceBody[next - 1] === '\r'
-          ? next - 1
-          : next === -1
-            ? end
-            : next;
-      if (lineEnd > pos) {
-        code += textSpan(sourceBody.slice(pos, lineEnd), bodyStart + pos, bodyStart + lineEnd);
-      }
-      if (next !== -1) {
-        // A single rendered newline covers the CRLF pair. Its endpoints map
-        // before and after the pair, while visible code characters retain
-        // their exact one-to-one source offsets.
-        code += textSpan('\n', bodyStart + lineEnd, bodyStart + end);
-      }
-      pos = end;
-    }
-    code += '</code>';
-  } else if (lang && hljs.getLanguage(lang)) {
-    code = hljs.highlight(body, { language: lang, ignoreIllegals: true }).value;
+  if (lang && hljs.getLanguage(lang)) {
+    highlighted = hljs.highlight(displayBody, { language: lang, ignoreIllegals: true }).value;
     cls = ` class="language-${lang}"`;
   } else {
-    code = escapeHtml(body);
+    highlighted = escapeHtml(displayBody);
   }
+  const code = `<code>${sourceOffsetCode(highlighted, sourceBody, bodyStart)}</code>`;
   // An empty fence has no source text; render an nbsp anchor inside the
   // code so the block is clickable and the caret can be placed in it.
   const span =
-    body === ''
+    sourceBody === ''
       ? `<span data-s="${bodyStart}" data-e="${bodyStart}"><code>\u00a0</code></span>`
-      : sourceBody.includes('\r\n')
-        ? code
-      : `<span data-s="${bodyStart}" data-e="${bodyEnd}"><code>${code}</code></span>`;
+      : code;
   // The fence markers (head/tail gaps) stay in the DOM for source mapping,
   // but are hidden: visible lines inside <pre> must be content only, so
   // clicks can never land on the marker lines and corrupt the fence.
@@ -330,7 +354,7 @@ function renderFence(t: Token, starts: number[], content: string, bi: number): s
     return `${hidden(head)}<pre class="mermaid" data-bi="${bi}">${span}</pre>${hidden(tail)}`;
   }
   // data-raw carries the un-highlighted source for the Copy button.
-  const copyBtn = `<button type="button" class="code-copy" data-raw="${escapeHtml(body)}" title="Copy code">Copy</button>`;
+  const copyBtn = `<button type="button" class="code-copy" data-raw="${escapeHtml(sourceBody)}" title="Copy code">Copy</button>`;
   return `<div class="codeblock" data-bi="${bi}">${copyBtn}${hidden(head)}<pre${cls}>${span}</pre>${hidden(tail)}</div>`;
 }
 

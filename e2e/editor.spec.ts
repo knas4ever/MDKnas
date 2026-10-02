@@ -340,29 +340,28 @@ test('code block shows a copy button that copies on click', async () => {
   await app.close();
 });
 
-test('typing inside a CRLF code block keeps the caret on the selected line', async () => {
-  const file = tempDoc('```\r\nfirst\r\nsecond\r\n```');
+test('typing inside a highlighted CRLF code block keeps the caret on the selected line', async () => {
+  const file = tempDoc('```bash\r\ncd ~/apps\r\n```');
   const app = await electron.launch({ args: ['.', '--open', file] });
   const win = await app.firstWindow();
   await win.waitForSelector('.wysiwyg-root');
   await win.waitForTimeout(1500);
 
-  await win.locator('.wysiwyg-root').evaluate(el => {
-    const text = el.querySelector<HTMLElement>('pre span[data-s="12"]')!.firstChild!;
+  const caret = await win.locator('.wysiwyg-root').evaluate(el => {
+    const text = el.querySelector<HTMLElement>('pre span[data-s="11"]')!.firstChild!;
     const range = document.createRange();
-    range.setStart(text, 3);
-    range.collapse(true);
-    const selection = window.getSelection()!;
-    selection.removeAllRanges();
-    selection.addRange(range);
+    range.setStart(text, 0);
+    range.setEnd(text, 3);
+    const rect = range.getBoundingClientRect();
+    return { x: rect.right, y: rect.top + rect.height / 2 };
   });
-  await win.waitForTimeout(100);
+  await win.mouse.click(caret.x, caret.y);
   await win.keyboard.press('ArrowRight');
   await win.keyboard.type('X');
 
   await expect
     .poll(async () => fs.readFileSync(file, 'utf-8'), { timeout: 5000 })
-    .toBe('```\r\nfirst\r\nsecoXnd\r\n```');
+    .toBe('```bash\r\ncd ~/aXpps\r\n```');
 
   await app.close();
 });
