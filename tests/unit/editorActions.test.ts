@@ -13,6 +13,7 @@ import {
   handleEnter,
   applyAction,
   applyLink,
+  resizeImage,
   toggleCodeBlock,
   insertTable,
   tableOperation,
@@ -126,6 +127,26 @@ describe('wrapSelection', () => {
     const r = wrapSelection('hello ***world***\n', S(9, 14), '**', '**');
     expect(r.content).toBe('hello *world*\n');
     expect(r.selection).toEqual(S(7, 12));
+  });
+});
+
+describe('resizeImage', () => {
+  it('adds a width attribute block', () => {
+    const r = resizeImage('![a](b.png)', S(0, 11), 50);
+    expect(r.content).toBe('![a](b.png){width=50%}');
+    expect(r.selection).toEqual(S(22, 22));
+  });
+  it('replaces an existing width', () => {
+    const r = resizeImage('![a](b.png){width=50%}', S(0, 22), 80);
+    expect(r.content).toBe('![a](b.png){width=80%}');
+  });
+  it('100% drops the attribute block', () => {
+    const r = resizeImage('![a](b.png){width=50%}', S(0, 22), 100);
+    expect(r.content).toBe('![a](b.png)');
+  });
+  it('clamps the percentage and ignores non-images', () => {
+    expect(resizeImage('![a](b.png)', S(0, 11), 900).content).toBe('![a](b.png){width=400%}');
+    expect(resizeImage('hello', S(0, 5), 50).content).toBe('hello');
   });
 });
 

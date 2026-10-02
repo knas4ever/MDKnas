@@ -219,8 +219,14 @@
   --menu-hover: #eef2ff;
 }
 
-/* Right-click table context menu */
-.table-menu button { color: var(--fg); background: transparent; border: none; cursor: pointer; }
+/* Right-click context menus (table actions, image resize) */
+.table-menu button,
+.image-menu button {
+  color: var(--fg);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
 
 /* --- Typewriter mode --- */
 .wysiwyg-root[data-typewriter='true'] [data-bi] { opacity: 0.25; }

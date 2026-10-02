@@ -108,6 +108,21 @@ describe('renderMarkdown', () => {
     expect(html).toContain('<img src="pic.png" alt="alt" class="md-img">');
   });
 
+  it('applies a width attribute block to images', () => {
+    const html = renderMarkdown('![alt](pic.png){width=50%}');
+    expect(html).toContain('style="width:50%"');
+    // The attribute block is part of the image's source range and renders
+    // invisibly, so it must not leak as text.
+    expect(html).toContain('<span class="img-wrap" data-s="0" data-e="26">');
+    expect(html.includes('{width=50%}')).toBe(false);
+  });
+
+  it('leaves unknown attribute blocks as text', () => {
+    const html = renderMarkdown('![alt](pic.png){#id}');
+    expect(html.includes('style=')).toBe(false);
+    expect(html).toContain('{#id}');
+  });
+
   it('keeps relative srcs until a resolver supplies a data URL', () => {
     const before = renderMarkdown('![a](test_assets/x.png)', '/tmp/dir');
     expect(before).toContain('<img src="test_assets/x.png"');

@@ -11,6 +11,7 @@ import {
   handleEnter,
   indent,
   insertText,
+  resizeImage,
   tableOperation,
   type EditorAction,
   type Selection,
@@ -383,6 +384,15 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
     rows: number;
     cols: number;
   } | null>(null);
+  // Right-click context menu on an image: resize it by width percentage.
+  const [imageMenu, setImageMenu] = useState<{
+    x: number;
+    y: number;
+    s: number;
+    e: number;
+  } | null>(null);
+  const [imagePct, setImagePct] = useState(50);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   // Block file drops anywhere outside the editor so the window doesn't
   // navigate to the dropped file.
@@ -673,6 +683,17 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
 
   const handleContextMenu = (e: React.MouseEvent<HTMLDivElement>): void => {
     const el = e.target as HTMLElement;
+    // An image: offer a resize-by-percentage menu.
+    const wrap = el.closest('.img-wrap') as HTMLElement | null;
+    if (wrap) {
+      const s = Number(wrap.dataset.s ?? '-1');
+      const en = Number(wrap.dataset.e ?? '-1');
+      if (!Number.isInteger(s) || !Number.isInteger(en) || s < 0 || en > content.length) return;
+      e.preventDefault();
+      setImagePct(50);
+      setImageMenu({ x: e.clientX, y: e.clientY, s, e: en });
+      return;
+    }
     const table = el.closest('table') as HTMLElement | null;
     if (!table) return; // elsewhere: keep the browser's default menu
     const cell = el.closest('td, th') as HTMLElement | null;
@@ -709,14 +730,33 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
     if (res) apply(res);
   };
 
+  // Write the typed percentage into the image source: the markdown gains a
+  // '{width=N%}' attribute block, which the renderer turns into an inline
+  // style. 100% removes the block again, so the document stays clean.
+  const runImageResize = (): void => {
+    const m = imageMenu;
+    if (!m) return;
+    setImageMenu(null);
+    apply(resizeImage(content, { start: m.s, end: m.e }, imagePct));
+  };
+
   useEffect(() => {
-    if (!tableMenu) return;
+    if (!tableMenu && !imageMenu) return;
+    // The percentage field starts pre-filled: select it so typing replaces
+    // the default instead of appending to it.
+    if (imageMenu) {
+      imageInputRef.current?.focus();
+      imageInputRef.current?.select();
+    }
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') setTableMenu(null);
+      if (e.key === 'Escape') {
+        setTableMenu(null);
+        setImageMenu(null);
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [tableMenu]);
+  }, [tableMenu, imageMenu]);
 
   // Drag & drop: images are saved into the document's assets folder
   // (<name>_assets/) and inserted as markdown at the caret position.
@@ -1075,6 +1115,51 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
                 {item.label}
               </button>
             ))}
+          </div>
+        </>
+      )}
+      {imageMenu && (
+        <>
+          {/* Click-away layer */}
+          <div className="fixed inset-0 z-40" onMouseDown={() => setImageMenu(null)} />
+          <div
+            className="image-menu fixed z-50 flex items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--bg)] px-2 py-1 text-sm shadow-lg"
+            style={{ left: imageMenu.x, top: imageMenu.y }}
+            onMouseDown={e => e.stopPropagation()}
+            role="group"
+            aria-label="Resize image"
+          >
+            <span className="text-sm opacity-70">Resize image — width %</span>
+            <input
+              ref={imageInputRef}
+              type="number"
+              min={1}
+              max={400}
+              value={imagePct}
+              onChange={ev => setImagePct(Number(ev.target.value))}
+              onKeyDown={ev => {
+                if (ev.key === 'Enter') {
+                  ev.preventDefault();
+                  runImageResize();
+                } else if (ev.key === 'Escape') {
+                  ev.preventDefault();
+                  setImageMenu(null);
+                }
+              }}
+              className="w-16 rounded border border-[var(--border)] bg-[var(--bg)] px-2 py-1 text-sm"
+            />
+            <button
+              onClick={() => setImageMenu(null)}
+              className="rounded px-2 py-1 text-sm"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={runImageResize}
+              className="rounded bg-[var(--accent)] px-2 py-1 text-sm text-white"
+            >
+              OK
+            </button>
           </div>
         </>
       )}

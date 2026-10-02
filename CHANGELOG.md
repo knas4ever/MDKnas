@@ -5,6 +5,11 @@ Version numbers are the build date: `ÅÅÅÅ.M.D`.
 ## 2026.10.2
 
 ### Features
+- **Resize an image** — right-click an image and type a percentage: the
+  markdown gains a pandoc-style size attribute (`![alt](pic.png){width=40%}`),
+  the rich view shows the image at that width, and the attribute stays hidden
+  inside the image's clickable unit. Typing 100 removes the attribute again,
+  and Backspace/Delete still remove the whole image including its size.
 
 ### Fixes
 - **Up/Down in wrapped list items** — a long item that wraps over several

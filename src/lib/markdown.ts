@@ -65,6 +65,25 @@ function mathSpan(latex: string, s: number, e: number): string {
   return `<span class="math" data-s="${s}" data-e="${e}">${html}</span>`;
 }
 
+// An optional pandoc-style attribute block after an image sets its display
+// size: ![alt](src){width=50%}. Bare numbers take the unit ('50%' and '240px'
+// both size the width); 'height='/'h=' size the height. Returns the inline
+// CSS for the <img>, or '' when the block is not a size we understand, in
+// which case it stays plain text in the document.
+function imageSizeStyle(spec: string): string {
+  const parts = spec.split(/[,;\s]+/).filter(p => p !== '');
+  if (!parts.length) return '';
+  const css: string[] = [];
+  for (const part of parts) {
+    const m = /^(?:(width|height|w|h)\s*=\s*)?(\d+(?:\.\d+)?)\s*(%|px)?$/i.exec(part);
+    if (!m) return '';
+    const isHeight = m[1] !== undefined && /^h/i.test(m[1]);
+    if (isHeight && !m[3]) return '';
+    css.push(`${isHeight ? 'height' : 'width'}:${m[2]}${m[3] ?? 'px'}`);
+  }
+  return css.join(';');
+}
+
 interface InlineCtx {
   out: string;
   pos: number;
@@ -85,6 +104,9 @@ interface InlineCtx {
   // Resolves an absolute image path to a loadable src (data URL). The
   // editor caches these and re-renders when new entries arrive.
   resolveImg?: (abs: string) => string | null;
+  // The raw markdown source, used to read attributes that markdown-it
+  // leaves as separate text (e.g. the '{width=50%}' after an image).
+  src?: string;
 }
 
 function inlineGap(ctx: InlineCtx, target: number): void {
@@ -103,21 +125,30 @@ function inlineGap(ctx: InlineCtx, target: number): void {
 function renderInline(tokens: Token[], ctx: InlineCtx): string {
   ctx.lineIdx = 0;
   let lastHref = '';
+  // Source text of an image's '{width=50%}' block. markdown-it keeps it as a
+  // separate text token while the image case has already anchored and hidden
+  // it, so the next text token must skip those characters.
+  let pendingAttrText = '';
   for (const t of tokens) {
     switch (t.type) {
       case 'text': {
-        const start = ctx.pos;
-        let c = t.content;
-        let p = start;
+        let skipped = 0;
+        if (pendingAttrText !== '') {
+          if (t.content.startsWith(pendingAttrText)) skipped = pendingAttrText.length;
+          pendingAttrText = '';
+        }
+        const start = ctx.pos - skipped;
+        let c = t.content.slice(skipped);
+        let p = ctx.pos;
         if (ctx.taskPrefix > 0 && ctx.lineIdx === 0) {
           p += ctx.taskPrefix;
           c = c.slice(ctx.taskPrefix);
         }
-        if (p > start) {
+        if (p > start + skipped) {
           // The stripped task-list prefix ("[ ] ") always needs a DOM anchor,
           // even when the item text is empty (a bare checkbox would
           // otherwise leave an uncoverable hole and an unclickable line).
-          ctx.out += gapSpan(start, p, true);
+          ctx.out += gapSpan(start + skipped, p, true);
         }
         if (c !== '') {
           ctx.hasRealContent = true;
@@ -185,12 +216,21 @@ function renderInline(tokens: Token[], ctx: InlineCtx): string {
           : (abs && ctx.resolveImg?.(abs)) || rawSrc;
         // "![" + alt + "]" + "(" + rawSrc + ")"
         const total = 2 + t.content.length + 1 + 1 + rawSrc.length + 1;
-        ctx.out += `<span class="img-wrap" data-s="${ctx.pos}" data-e="${ctx.pos + total}">`;
-        ctx.out += gapSpan(ctx.pos, ctx.pos + total);
+        // A trailing '{width=50%}' block belongs to the image's source range,
+        // so the whole unit stays clickable and every offset keeps its anchor.
+        const attrMatch = ctx.src ? /^\{([^{}]+)\}/.exec(ctx.src.slice(ctx.pos + total)) : null;
+        const sizeStyle = attrMatch ? imageSizeStyle(attrMatch[1]) : '';
+        const attrLen = sizeStyle ? attrMatch?.[0].length ?? 0 : 0;
+        pendingAttrText = sizeStyle ? attrMatch?.[0] ?? '' : '';
+        ctx.out +=
+          `<span class="img-wrap" data-s="${ctx.pos}" data-e="${ctx.pos + total + attrLen}">`;
+        ctx.out += gapSpan(ctx.pos, ctx.pos + total + attrLen);
         const absAttr = abs ? ` data-abs="${escAttr(abs)}"` : '';
-        ctx.out += `<img src="${escAttr(src)}" alt="${escAttr(t.content)}" class="md-img"${absAttr}>`;
+        const styleAttr = sizeStyle ? ` style="${escAttr(sizeStyle)}"` : '';
+        ctx.out +=
+          `<img src="${escAttr(src)}" alt="${escAttr(t.content)}" class="md-img"${absAttr}${styleAttr}>`;
         ctx.out += '</span>';
-        ctx.pos += total;
+        ctx.pos += total + attrLen;
         break;
       }
       case 'html_inline': {
@@ -490,7 +530,8 @@ export function renderMarkdown(
         if (inTableCell && children.length === 0) {
           html += `<span data-s="${covered}" data-e="${covered}">\u00a0</span>`;
         } else {
-          const ctx: InlineCtx = { out: '', pos: covered, starts, ls: paraLs, lineIdx: 0, lineGap, taskPrefix, contOpen: false, hasRealContent: false, baseDir, resolveImg };
+          const ctx: InlineCtx =
+            { out: '', pos: covered, starts, ls: paraLs, lineIdx: 0, lineGap, taskPrefix, contOpen: false, hasRealContent: false, baseDir, resolveImg, src: content };
           html += renderInline(children, ctx);
           covered = ctx.pos;
           paraHadRealContent = ctx.hasRealContent;

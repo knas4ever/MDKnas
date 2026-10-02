@@ -654,6 +654,25 @@ function joinRow(cells: string[]): string {
  * cell under the cursor. Returns null when the operation is impossible
  * (e.g. deleting the header row or the last column).
  */
+// Rewrite the display size of the image whose source range is [start, end)
+// (the img-wrap span covers a trailing '{width=…}' block too). 100% drops
+// the attribute block, keeping the markdown clean.
+export function resizeImage(
+  content: string,
+  sel: Selection,
+  pct: number
+): { content: string; selection: Selection } {
+  const img = content.slice(sel.start, sel.end);
+  const m = /^!\[[^\]]*\]\([^)]*\)/.exec(img);
+  if (!m) return { content, selection: sel };
+  const head = m[0];
+  const width = Math.max(1, Math.min(400, Math.round(pct) || 100));
+  const attr = width === 100 ? '' : `{width=${width}%}`;
+  const next = content.slice(0, sel.start) + head + attr + content.slice(sel.end);
+  const caret = sel.start + head.length + attr.length;
+  return { content: next, selection: { start: caret, end: caret } };
+}
+
 export function tableOperation(
   content: string,
   tableStart: number,
