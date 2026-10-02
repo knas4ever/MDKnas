@@ -392,6 +392,32 @@ test('left arrow from a code block returns to the preceding text', async () => {
   await app.close();
 });
 
+test('right arrow into a code block leaves the preceding text intact', async () => {
+  const file = tempDoc('before\r\n\r\n```bash\r\ncd ~/apps\r\n```\r\n\r\nafter');
+  const app = await electron.launch({ args: ['.', '--open', file] });
+  const win = await app.firstWindow();
+  await win.waitForSelector('.wysiwyg-root');
+  await win.waitForTimeout(1500);
+
+  await win.locator('.wysiwyg-root').evaluate(el => {
+    const text = el.querySelector<HTMLElement>('p span[data-s="0"]')!.firstChild!;
+    const range = document.createRange();
+    range.setStart(text, text.nodeValue!.length);
+    range.collapse(true);
+    const selection = window.getSelection()!;
+    selection.removeAllRanges();
+    selection.addRange(range);
+  });
+  await win.keyboard.press('ArrowRight');
+  await win.keyboard.type('X');
+
+  await expect
+    .poll(async () => fs.readFileSync(file, 'utf-8'), { timeout: 5000 })
+    .toBe('before\r\n\r\n```bash\r\nXcd ~/apps\r\n```\r\n\r\nafter');
+
+  await app.close();
+});
+
 test('pasting text persists in the document', async () => {
   const file = tempDoc('start');
   const app = await electron.launch({ args: ['.', '--open', file] });

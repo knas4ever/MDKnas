@@ -12,6 +12,8 @@ Version numbers are the build date: `ÅÅÅÅ.M.D`.
   editing and navigating with arrow keys, including syntax-highlighted code.
 - **Leaving code blocks with Left Arrow** — the caret now returns to the end
   of the preceding text instead of jumping to the top of the document.
+- **Entering code blocks with Right Arrow** — the caret now enters at the
+  first editable code character instead of jumping to the document start.
 
 ## 2026.9.30
 

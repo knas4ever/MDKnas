@@ -187,6 +187,20 @@ function precedingEditableSourceEnd(root: HTMLElement, block: HTMLElement): numb
   return end;
 }
 
+function followingCodeBlock(unit: HTMLElement, root: HTMLElement): HTMLElement | null {
+  let el: Element | null = unit;
+  while (el && el !== root) {
+    let sibling: Element | null = el.nextElementSibling;
+    while (sibling) {
+      if (sibling.classList.contains('codeblock')) return sibling as HTMLElement;
+      if (!sibling.hasAttribute('data-blank-line') && !sibling.classList.contains('src-only')) return null;
+      sibling = sibling.nextElementSibling;
+    }
+    el = el.parentElement;
+  }
+  return null;
+}
+
 function rectOfText(node: Text): DOMRect {
   const r = document.createRange();
   r.setStart(node, 0);
@@ -703,6 +717,33 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
         const block = (pre.closest('.codeblock') ?? pre) as HTMLElement;
         const pos = precedingEditableSourceEnd(root, block);
         if (pos === null) return;
+        e.preventDefault();
+        apply({ content, selection: { start: pos, end: pos } });
+        return;
+      }
+      case 'ArrowRight': {
+        if (e.shiftKey || e.altKey) return;
+        const root = rootRef.current;
+        const sel = window.getSelection();
+        if (!root || !sel || sel.rangeCount === 0) return;
+        const range = sel.getRangeAt(0);
+        if (!range.collapsed) return;
+        const unit = lineUnitOf(range.startContainer, root);
+        if (!unit) return;
+        const last = realTextNodeOf(unit, false);
+        const gap = range.startContainer.parentElement?.closest('[data-gap]');
+        const atTrailingGap =
+          gap?.getAttribute('data-gap') !== 'prefix' &&
+          gap?.closest('[data-blank-line]') == null;
+        const atTextEnd =
+          range.startContainer === last &&
+          range.startOffset === (last.nodeValue ?? '').length;
+        if (!atTextEnd && !atTrailingGap) return;
+        const block = followingCodeBlock(unit, root);
+        const first = block?.querySelector('pre') && realTextNodeOf(block.querySelector('pre')!, true);
+        if (!first) return;
+        const pos = Number(first.parentElement?.closest<HTMLElement>('[data-s]')?.dataset.s ?? '-1');
+        if (!Number.isInteger(pos) || pos < 0) return;
         e.preventDefault();
         apply({ content, selection: { start: pos, end: pos } });
         return;
