@@ -148,6 +148,34 @@ function adjacentUnit(unit: HTMLElement, root: HTMLElement, down: boolean): HTML
   return null;
 }
 
+// All editable text nodes of a block, in DOM order: real text, skipping
+// zero-width coverage gaps and blank-line divs.
+function realTextNodes(block: HTMLElement): Text[] {
+  const nodes: Text[] = [];
+  const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+  let n: Node | null;
+  while ((n = walker.nextNode()) !== null) {
+    const t = n as Text;
+    if ((t.nodeValue ?? '').length === 0) continue;
+    if (t.parentElement?.closest('[data-blank-line]')) continue;
+    if (t.parentElement?.getAttribute('data-gap') != null) continue;
+    nodes.push(t);
+  }
+  return nodes;
+}
+
+// The real text nodes sharing one visual line box: `node`'s line when given,
+// otherwise the block's first (or last) line. Column is measured from the
+// left edge of the line the caret actually sits on, so wrapped blocks and
+// indented lists keep their logical column when the caret crosses.
+function lineNodes(block: HTMLElement, first: boolean, node: Text | null): Text[] {
+  const nodes = realTextNodes(block);
+  if (!nodes.length) return [];
+  const anchor = node && nodes.some((t) => t === node) ? node : (first ? nodes[0] : nodes[nodes.length - 1]);
+  const top = rectOfText(anchor).top;
+  return nodes.filter((t) => Math.abs(rectOfText(t).top - top) < 3);
+}
+
 // The first (or last) real text node of a block: editable text, skipping
 // zero-width coverage gaps and blank-line divs (rendered inside the
 // preceding block). Its span's data-s/data-e attributes give the source
@@ -782,47 +810,52 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
           range.startContainer.parentElement?.getAttribute('data-gap') == null
             ? (range.startContainer as Text)
             : realTextNodeOf(use, !down);
-        const currentLeft = current ? rectOfText(current).left : cr.left;
-        const currentOffset =
-          current && range.startContainer === current
-            ? range.startOffset
-            : current
-              ? charOffsetAtX(current, cr.left)
-              : 0;
-        const preferredOffset = verticalColumnRef.current ?? currentOffset;
+        // The caret's column, measured in pixels from the left edge of the
+        // visual line it sits on. A line-relative column (not an absolute
+        // screen x) is what survives crossing indented blocks: list markers,
+        // task checkboxes and headings all shift the text column.
+        const caretLine = lineNodes(use, !down, current);
+        const currentLeft = caretLine.length
+          ? Math.min(...caretLine.map((t) => rectOfText(t).left))
+          : current
+            ? rectOfText(current).left
+            : cr.left;
+        const columnPx =
+          verticalColumnRef.current ?? Math.max(0, cr.left - currentLeft);
         e.preventDefault();
         if (leaf.hasAttribute('data-blank-line')) {
           // Land on the blank line itself (its nbsp span's source position).
           const span = leaf.querySelector('span');
           const src = Number(span?.getAttribute('data-s') ?? 0);
-          verticalColumnRef.current = preferredOffset;
+          verticalColumnRef.current = columnPx;
           apply({ content, selection: { start: src, end: src } });
           return;
         }
-        const directionalTarget = realTextNodeOf(leaf, down);
-        const firstTarget = realTextNodeOf(leaf, true);
-        if (!directionalTarget || !firstTarget) return;
-        // Moving up into an item that starts with inline markup must enter
-        // its first editable text span, not the trailing text span.
-        const entersLeadingMarkup =
-          !down && leaf.tagName === 'LI' && firstTarget !== directionalTarget;
-        const tn = entersLeadingMarkup ? firstTarget : directionalTarget;
-        const targetLeft = rectOfText(tn).left;
-        const useLogicalColumn =
-          entersLeadingMarkup ||
-          use.hasAttribute('data-blank-line') ||
-          Math.abs(targetLeft - currentLeft) > 1;
-        // Keep the horizontal position relative to the editable text
-        // column. Lists and task items are indented, so an absolute screen x
-        // would move the caret right every time it crossed their boundary.
-        const targetOffset =
-          useLogicalColumn
-            ? Math.min(preferredOffset, (tn.nodeValue ?? '').length)
-            : charOffsetAtX(tn, targetLeft + Math.max(0, cr.left - currentLeft));
-        const span = tn.parentElement;
+        // The target's first (down) or last (up) visual line: every text
+        // span on that line is a candidate, so a caret right of inline
+        // markup (bold, code, links) stays right of it instead of clipping
+        // into the leading span.
+        const targetLine = lineNodes(leaf, down, null);
+        if (!targetLine.length) return;
+        const targetLeft = Math.min(...targetLine.map((t) => rectOfText(t).left));
+        const targetX = targetLeft + columnPx;
+        let tn = targetLine[targetLine.length - 1];
+        for (const t of targetLine) {
+          if (targetX <= rectOfText(t).right) {
+            tn = t;
+            break;
+          }
+        }
+        const targetOffset = charOffsetAtX(tn, targetX);
+        const span = tn.parentElement?.closest('[data-s]');
         const srcStart = Number(span?.getAttribute('data-s') ?? 0);
-        const pos = srcStart + targetOffset;
-        verticalColumnRef.current = preferredOffset;
+        const srcEnd = Number(span?.getAttribute('data-e') ?? srcStart);
+        const textLen = (tn.nodeValue ?? '').length;
+        // Spans whose rendered text is shorter than their source range
+        // (math, image alt) map proportionally, like cursor.ts.
+        const pos =
+          srcStart + (textLen === 0 ? 0 : Math.round(((srcEnd - srcStart) * targetOffset) / textLen));
+        verticalColumnRef.current = columnPx;
         apply({ content, selection: { start: pos, end: pos } });
         return;
       }

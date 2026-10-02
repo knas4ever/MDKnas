@@ -2,6 +2,17 @@
 
 Version numbers are the build date: `ÅÅÅÅ.M.D`.
 
+## 2026.10.2
+
+### Features
+
+### Fixes
+- **Up/Down inside bold-led lists** — moving the caret up/down between list
+  items that start with bold, code or links no longer clips to the end of the
+  leading markup. The column is now measured from the left edge of the visual
+  line the caret sits on and every text span on the target line is a candidate,
+  so the caret lands at the same visual position on the neighbouring line.
+
 ## 2026.10.1
 
 ### Features

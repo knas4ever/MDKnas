@@ -1,7 +1,7 @@
 {
   "name": "mdknas",
   "productName": "MDKnas",
-  "version": "2026.10.1",
+  "version": "2026.10.2",
   "description": "MDKnas \u2014 the crispy WYSIWYG markdown editor",
   "main": "dist-electron/main.js",
   "scripts": {
