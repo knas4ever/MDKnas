@@ -226,9 +226,13 @@ function renderInline(tokens: Token[], ctx: InlineCtx): string {
           `<span class="img-wrap" data-s="${ctx.pos}" data-e="${ctx.pos + total + attrLen}">`;
         ctx.out += gapSpan(ctx.pos, ctx.pos + total + attrLen);
         const absAttr = abs ? ` data-abs="${escAttr(abs)}"` : '';
+        // data-sized marks an image whose display size came from a '{width=…}'
+        // block: the stylesheet lifts its max-width cap so it may grow past the
+        // text column instead of being clamped to it.
+        const sizedAttr = sizeStyle ? ' data-sized' : '';
         const styleAttr = sizeStyle ? ` style="${escAttr(sizeStyle)}"` : '';
         ctx.out +=
-          `<img src="${escAttr(src)}" alt="${escAttr(t.content)}" class="md-img"${absAttr}${styleAttr}>`;
+          `<img src="${escAttr(src)}" alt="${escAttr(t.content)}" class="md-img"${absAttr}${sizedAttr}${styleAttr}>`;
         ctx.out += '</span>';
         ctx.pos += total + attrLen;
         break;

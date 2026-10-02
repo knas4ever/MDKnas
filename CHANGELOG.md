@@ -10,6 +10,11 @@ Version numbers are the build date: `ÅÅÅÅ.M.D`.
   the rich view shows the image at that width, and the attribute stays hidden
   inside the image's clickable unit. Typing 100 removes the attribute again,
   and Backspace/Delete still remove the whole image including its size.
+- **Text column left-aligned** — the editor column used to be centred, which
+  left dead space on both sides and a `max-width: 100%` cap clamped every
+  image to the column, so resizing above 100% did nothing visible. The column
+  now sits flush left and a sized image may grow into the free window width
+  to the right.
 
 ### Fixes
 - **Up/Down in wrapped list items** — a long item that wraps over several

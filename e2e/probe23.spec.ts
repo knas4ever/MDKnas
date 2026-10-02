@@ -44,6 +44,45 @@ test('right-click an image and type a percentage resizes it', async () => {
   await app.close();
 });
 
+test('a sized image may grow past the text column', async () => {
+  const file = tempDoc(`![dot](${PNG})\n`);
+  const app = await launch(file);
+  const win = await app.firstWindow();
+  await win.waitForSelector('.wysiwyg-root');
+  await win.waitForTimeout(500);
+  await win.locator('img.md-img').first().click({ button: 'right' });
+  await win.waitForTimeout(400);
+  const menu = win.locator('.image-menu');
+  await expect(menu).toBeVisible();
+  await menu.locator('input').first().waitFor();
+  await win.keyboard.type('150');
+  await win.waitForTimeout(200);
+  await win.keyboard.press('Enter');
+  await win.waitForTimeout(600);
+  const sizes = await win.evaluate(() => {
+    const img = document.querySelector('img.md-img') as HTMLElement;
+    const root = document.querySelector('.wysiwyg-root') as HTMLElement;
+    const ib = img.getBoundingClientRect();
+    const rb = root.getBoundingClientRect();
+    return {
+      img: Math.round(ib.width),
+      root: Math.round(rb.width),
+      // The editor must sit flush against its scroll container: no dead space
+      // on the left, so an enlarged image has room to grow to the right.
+      rootLeft: Math.round(rb.left),
+      boxLeft: Math.round(root.parentElement!.getBoundingClientRect().left),
+      style: img.getAttribute('style') ?? ''
+    };
+  });
+  console.log('SIZED:', JSON.stringify(sizes));
+  expect(sizes.style).toBe('width:150%');
+  expect(sizes.img > sizes.root).toBe(true);
+  // The column is left-aligned, so the enlarged image has room to grow into
+  // instead of being centred with dead space on both sides.
+  expect(Math.abs(sizes.rootLeft - sizes.boxLeft)).toBeLessThanOrEqual(2);
+  await app.close();
+});
+
 test('backspace removes the whole image including its size attribute', async () => {
   const file = tempDoc(`x ![dot](${PNG}){width=40%} y\n`);
   const app = await launch(file);
