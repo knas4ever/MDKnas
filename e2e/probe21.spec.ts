@@ -21,9 +21,14 @@ const taState = (win: any) => win.evaluate(() => {
   };
 });
 
+const launch = async (file: string) => {
+  const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'mdknas-profile-'));
+  return electron.launch({ args: ['.', '--open', file, `--user-data-dir=${profile}`] });
+};
+
 const boot = async (content: string) => {
   const file = tempDoc(content);
-  const app = await electron.launch({ args: ['.', '--open', file] });
+  const app = await launch(file);
   const win = await app.firstWindow();
   await win.waitForSelector('.wysiwyg-root');
   await win.waitForTimeout(400);
@@ -122,7 +127,7 @@ const richCaret = (win: any) => win.evaluate(() => {
 
 test('rich mode: bold then italic at the caret keeps the bold', async () => {
   const file = tempDoc('hello world\n');
-  const app = await electron.launch({ args: ['.', '--open', file] });
+  const app = await launch(file);
   const win = await app.firstWindow();
   await win.waitForSelector('.wysiwyg-root');
   await win.waitForTimeout(400);
@@ -142,6 +147,78 @@ test('rich mode: bold then italic at the caret keeps the bold', async () => {
   const t = fs.readFileSync(file, 'utf8');
   console.log('RICH-FILE:', JSON.stringify(t));
   expect(t).toBe('hello ***world***\n');
+  await app.close();
+});
+
+test('rich mode: one Right steps past the whole bold marker', async () => {
+  const file = tempDoc('hello world\n');
+  const app = await launch(file);
+  const win = await app.firstWindow();
+  await win.waitForSelector('.wysiwyg-root');
+  await win.waitForTimeout(400);
+  await win.locator('.wysiwyg-root').first().click();
+  await win.keyboard.press('Control+Home');
+  for (let i = 0; i < 6; i++) await win.keyboard.press('ArrowRight');
+  await win.keyboard.down('Shift');
+  for (let i = 0; i < 5; i++) await win.keyboard.press('ArrowRight');
+  await win.keyboard.up('Shift');
+  await win.waitForTimeout(300);
+  await win.getByTitle('Bold (Ctrl+B)').click();
+  await win.waitForTimeout(400);
+  // Collapse the selection, then a single Right must pass the whole '**'
+  await win.keyboard.press('ArrowRight');
+  await win.waitForTimeout(300);
+  await win.keyboard.press('ArrowRight');
+  await win.waitForTimeout(300);
+  await win.keyboard.type('X');
+  await win.keyboard.press('Control+s');
+  await win.waitForTimeout(700);
+  const t = fs.readFileSync(file, 'utf8');
+  console.log('BOLD-RIGHT:', JSON.stringify(t));
+  expect(t).toBe('hello **world**X\n');
+
+  // One Left from just outside the closing marker must step back inside the
+  // bold (the caret sits at 16 after typing X, 15 is outside the markers).
+  await win.keyboard.press('ArrowLeft');
+  await win.waitForTimeout(300);
+  await win.keyboard.press('ArrowLeft');
+  await win.waitForTimeout(300);
+  await win.keyboard.type('Y');
+  await win.keyboard.press('Control+s');
+  await win.waitForTimeout(700);
+  const t2 = fs.readFileSync(file, 'utf8');
+  console.log('BOLD-LEFT:', JSON.stringify(t2));
+  expect(t2).toBe('hello **worldY**X\n');
+  await app.close();
+});
+
+test('rich mode: one Right steps past bold+italic markers', async () => {
+  const file = tempDoc('hello world\n');
+  const app = await launch(file);
+  const win = await app.firstWindow();
+  await win.waitForSelector('.wysiwyg-root');
+  await win.waitForTimeout(400);
+  await win.locator('.wysiwyg-root').first().click();
+  await win.keyboard.press('Control+Home');
+  for (let i = 0; i < 6; i++) await win.keyboard.press('ArrowRight');
+  await win.keyboard.down('Shift');
+  for (let i = 0; i < 5; i++) await win.keyboard.press('ArrowRight');
+  await win.keyboard.up('Shift');
+  await win.waitForTimeout(300);
+  await win.getByTitle('Bold (Ctrl+B)').click();
+  await win.waitForTimeout(400);
+  await win.getByTitle('Italic (Ctrl+I)').click();
+  await win.waitForTimeout(400);
+  await win.keyboard.press('ArrowRight');
+  await win.waitForTimeout(300);
+  await win.keyboard.press('ArrowRight');
+  await win.waitForTimeout(300);
+  await win.keyboard.type('X');
+  await win.keyboard.press('Control+s');
+  await win.waitForTimeout(700);
+  const t = fs.readFileSync(file, 'utf8');
+  console.log('BOLD-ITALIC-RIGHT:', JSON.stringify(t));
+  expect(t).toBe('hello ***world***X\n');
   await app.close();
 });
 

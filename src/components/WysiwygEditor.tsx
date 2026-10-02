@@ -89,6 +89,39 @@ function imageRangeAt(
   return null;
 }
 
+// Inline markup the caret steps over in a single arrow-key press: a whole
+// run of emphasis characters, or an HTML inline tag. Leaving styled text
+// must never cost one press per marker character.
+const MARKUP_RUN_CHARS = '*_~`';
+const MARKUP_TAGS = ['<u>', '</u>', '<mark>', '</mark>'];
+
+// The source position reached by stepping one arrow key right/left from pos
+// over the markup sitting at the caret (returns pos when there is none).
+function markupStep(content: string, pos: number, dir: 'left' | 'right'): number {
+  if (dir === 'right') {
+    const ch = content[pos];
+    if (ch && MARKUP_RUN_CHARS.includes(ch)) {
+      let e = pos;
+      while (e < content.length && content[e] === ch) e += 1;
+      return e;
+    }
+    for (const tag of MARKUP_TAGS) {
+      if (content.startsWith(tag, pos)) return pos + tag.length;
+    }
+    return pos;
+  }
+  const ch = content[pos - 1];
+  if (ch && MARKUP_RUN_CHARS.includes(ch)) {
+    let s = pos - 1;
+    while (s >= 0 && content[s] === ch) s -= 1;
+    return s + 1;
+  }
+  for (const tag of MARKUP_TAGS) {
+    if (content.endsWith(tag, pos)) return pos - tag.length;
+  }
+  return pos;
+}
+
 // The element that renders the caret's line (paragraph, list item,
 // heading, table cell, ...). The browser cannot move the caret out of
 // these blocks, so ArrowDown/ArrowUp on their last/first line cross to the
@@ -738,6 +771,23 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
         if (!root || !sel || sel.rangeCount === 0) return;
         const range = sel.getRangeAt(0);
         if (!range.collapsed) return;
+        // Step over a whole emphasis run in one press, so leaving styled text
+        // costs a single key regardless of the marker length. Code keeps its
+        // literal characters, so it is excluded.
+        const inCode =
+          (range.startContainer.nodeType === Node.ELEMENT_NODE
+            ? (range.startContainer as Element)
+            : range.startContainer.parentElement)?.closest('pre code') != null;
+        if (!inCode) {
+          const caret = effectiveSelection();
+          const to =
+            caret.start === caret.end ? markupStep(content, caret.start, 'left') : caret.start;
+          if (to !== caret.start) {
+            e.preventDefault();
+            apply({ content, selection: { start: to, end: to } });
+            return;
+          }
+        }
         const pre =
           range.startContainer.nodeType === Node.ELEMENT_NODE
             ? (range.startContainer as Element).closest('pre')
@@ -759,6 +809,21 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
         if (!root || !sel || sel.rangeCount === 0) return;
         const range = sel.getRangeAt(0);
         if (!range.collapsed) return;
+        // Step over a whole emphasis run in one press (see ArrowLeft).
+        const inCode =
+          (range.startContainer.nodeType === Node.ELEMENT_NODE
+            ? (range.startContainer as Element)
+            : range.startContainer.parentElement)?.closest('pre code') != null;
+        if (!inCode) {
+          const caret = effectiveSelection();
+          const to =
+            caret.start === caret.end ? markupStep(content, caret.start, 'right') : caret.start;
+          if (to !== caret.start) {
+            e.preventDefault();
+            apply({ content, selection: { start: to, end: to } });
+            return;
+          }
+        }
         const unit = lineUnitOf(range.startContainer, root);
         if (!unit) return;
         const last = realTextNodeOf(unit, false);

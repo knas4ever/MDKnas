@@ -7,6 +7,11 @@ Version numbers are the build date: `ÅÅÅÅ.M.D`.
 ### Features
 
 ### Fixes
+- **Stepping out of styled text** — one Right (or Left on the other side) now
+  passes the whole emphasis marker: after bolding a selection, a single Right
+  leaves `**word**`, and with bold+italic it leaves `***word***` too, instead
+  of one press per marker character. Code keeps its literal characters, so
+  arrow keys inside code blocks still move one character at a time.
 - **Stacking styles** — pressing Italic on text that is already bold (or Bold
   on italic text) now nests the new style instead of stripping one character
   of the existing marker: `**word**` + Italic gives `***word***`, and pressing
