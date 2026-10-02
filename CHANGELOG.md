@@ -7,6 +7,10 @@ Version numbers are the build date: `ÅÅÅÅ.M.D`.
 ### Features
 
 ### Fixes
+- **Up/Down in wrapped list items** — a long item that wraps over several
+  lines is now stepped through one visual line per press; only the item's
+  first/last line crosses to the neighbouring item, instead of every press
+  jumping to the next item.
 - **Stepping out of styled text** — one Right (or Left on the other side) now
   passes the whole emphasis marker: after bolding a selection, a single Right
   leaves `**word**`, and with bold+italic it leaves `***word***` too, instead

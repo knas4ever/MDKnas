@@ -859,8 +859,9 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
         // boxes, so compare the caret's line with the unit's first/last
         // VISUAL line (real text or an internal blank line) instead of the
         // unit rect. A blank-line unit is a single line, so it is always on
-        // its boundary.
-        if (!use.hasAttribute('data-blank-line') && use.tagName !== 'LI') {
+        // its boundary. Wrapped list items keep their inner lines with the
+        // native move; only the first/last line crosses to the neighbour.
+        if (!use.hasAttribute('data-blank-line')) {
           const refRect = boundaryRectOf(use, !down);
           if (!refRect) return;
           const onBoundaryLine = down ? cr.bottom >= refRect.bottom - 4 : cr.top <= refRect.top + 4;
