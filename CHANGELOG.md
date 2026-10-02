@@ -7,11 +7,18 @@ Version numbers are the build date: `ÅÅÅÅ.M.D`.
 ### Features
 
 ### Fixes
+- **Raw markdown mode formatting** — Bold/Italic/etc. from the toolbar or the
+  Format menu now act on the text you selected in the raw source view (the
+  textarea's selection was ignored, so markers landed at the document start),
+  and the caret is re-placed inside the new markers afterwards instead of the
+  editor losing focus when the toolbar button was clicked. CRLF documents
+  keep their exact source offsets.
 - **Up/Down inside bold-led lists** — moving the caret up/down between list
   items that start with bold, code or links no longer clips to the end of the
-  leading markup. The column is now measured from the left edge of the visual
-  line the caret sits on and every text span on the target line is a candidate,
-  so the caret lands at the same visual position on the neighbouring line.
+  leading markup. The column is measured from the left edge of the visual
+  line the caret sits on and every text span on the target line is a
+  candidate, so the caret lands at the same visual position on the
+  neighbouring line.
 
 ## 2026.10.1
 

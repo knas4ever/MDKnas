@@ -302,13 +302,62 @@ export default function App() {
     }
   }, [content, currentPath, handleSaveAs]);
 
+  // Raw-markdown mode: the <textarea> owns the caret. React's `onChange`
+  // handler for form controls only fires when the element's *value* changes,
+  // so a selection made without typing never reaches the state — actions
+  // must read the live textarea range. The textarea also normalizes CRLF to
+  // LF, so its offsets lag the source by the number of '\r' before them.
+  const sourceSelection = useCallback(
+    (sel: Selection): Selection => {
+      const t = sourceRef.current;
+      if (!t) return sel;
+      const srcOf: number[] = [];
+      for (let i = 0; i <= content.length; i++) {
+        if (content[i] !== '\r') srcOf.push(i);
+      }
+      const at = (ta: number) => srcOf[Math.max(0, Math.min(ta, srcOf.length - 1))];
+      return { start: at(t.selectionStart), end: at(t.selectionEnd) };
+    },
+    [content]
+  );
+
+  // Place the caret in the textarea from a source selection (and scroll the
+  // caret line into view: a programmatic selection does not scroll).
+  const placeTextarea = useCallback((sel: Selection) => {
+    const t = sourceRef.current;
+    if (!t) return;
+    const ta = (pos: number) =>
+      pos - (content.slice(0, Math.max(0, Math.min(pos, content.length))).match(/\r/g)?.length ?? 0);
+    t.focus();
+    t.setSelectionRange(ta(sel.start), ta(sel.end));
+    const line = content.slice(0, sel.start).split('\n').length - 1;
+    const lh = parseFloat(getComputedStyle(t).lineHeight) || 0;
+    const max = t.scrollHeight - t.clientHeight;
+    t.scrollTop = Math.max(0, Math.min(max, line * lh));
+  }, [content]);
+
+  // Run a format action in raw-markdown mode: act on the live textarea
+  // selection, then re-place the caret — clicking a toolbar or menu button
+  // moves focus to that button and clears the textarea selection.
+  const applySourceAction = useCallback((action: EditorAction, arg?: string) => {
+    const r = applyAction(content, sourceSelection(selection), action, arg);
+    setContent(r.content);
+    setSelection(r.selection);
+  }, [content, selection, sourceSelection]);
+
+  // After every raw-mode edit the textarea must be re-focused and its
+  // caret moved to the new selection (the value update alone collapses the
+  // selection at offset 0).
+  useEffect(() => {
+    if (!sourceMode) return;
+    placeTextarea(selection);
+  }, [content, selection, sourceMode, placeTextarea]);
+
   const handleLink = useCallback(() => {
     void ask('Link URL', 'https://').then(url => {
       if (!url) return;
       if (sourceMode) {
-        const r = applyAction(content, selection, 'link', url);
-        setContent(r.content);
-        setSelection(r.selection);
+        applySourceAction('link', url);
       } else {
         editorRef.current?.execute('link', url);
       }
@@ -320,9 +369,7 @@ export default function App() {
       if (!size) return;
       const arg = `${size.rows},${size.cols}`;
       if (sourceMode) {
-        const r = applyAction(content, selection, 'table', arg);
-        setContent(r.content);
-        setSelection(r.selection);
+        applySourceAction('table', arg);
       } else {
         editorRef.current?.execute('table', arg);
       }
@@ -395,9 +442,7 @@ export default function App() {
         if (action === 'link') handleLink();
         else if (action === 'table') handleTable();
         else if (sourceMode) {
-          const r = applyAction(content, selection, action);
-          setContent(r.content);
-          setSelection(r.selection);
+          applySourceAction(action);
         } else {
           editorRef.current?.execute(action);
         }
@@ -433,28 +478,12 @@ export default function App() {
           content={content}
           onJump={pos => {
             // Focus the editor and scroll the heading into view: the
-            // selection state re-places the caret via the editor effect, but
-            // without focus the caret is not visible, and the programmatic
-            // placement does not scroll the view.
+            // selection state re-places the caret via the editor effect (and
+            // via the raw-mode effect), but without focus the caret is not
+            // visible, and the programmatic placement does not scroll the
+            // rich view.
             setSelection({ start: pos, end: pos });
-            if (sourceMode) {
-              const t = sourceRef.current;
-              if (t) {
-                t.focus();
-                // A textarea normalizes CRLF to LF, so drop the '\r' chars
-                // before pos or the caret drifts right by one per line.
-                const taPos = pos - (content.slice(0, pos).match(/\r/g)?.length ?? 0);
-                t.setSelectionRange(taPos, taPos);
-                // A programmatic selection does not scroll the textarea:
-                // scroll the caret line into view manually.
-                const line = content.slice(0, pos).split('\n').length - 1;
-                const lh = parseFloat(getComputedStyle(t).lineHeight) || 0;
-                const max = t.scrollHeight - t.clientHeight;
-                t.scrollTop = Math.max(0, Math.min(max, line * lh));
-              }
-            } else {
-              editorRef.current?.jumpTo(pos);
-            }
+            if (!sourceMode) editorRef.current?.jumpTo(pos);
           }}
           ask={ask}
         />
@@ -470,9 +499,7 @@ export default function App() {
                 return;
               }
               if (sourceMode) {
-                const r = applyAction(content, selection, a);
-                setContent(r.content);
-                setSelection(r.selection);
+                applySourceAction(a);
               } else {
                 editorRef.current?.execute(a);
               }
