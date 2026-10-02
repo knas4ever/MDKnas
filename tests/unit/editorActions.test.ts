@@ -102,6 +102,31 @@ describe('wrapSelection', () => {
   it('wraps plain selection with strikethrough', () => {
     expect(wrapSelection('hello', S(1, 4), '~~', '~~').content).toBe('h~~ell~~o');
   });
+  it('undoes its own empty pair at the caret', () => {
+    const r = wrapSelection('h****o', S(3, 3), '**', '**');
+    expect(r.content).toBe('ho');
+    expect(r.selection).toEqual(S(1, 1));
+  });
+  it('undoes its own empty italic pair', () => {
+    const r = wrapSelection('h**o', S(2, 2), '*', '*');
+    expect(r.content).toBe('ho');
+    expect(r.selection).toEqual(S(1, 1));
+  });
+  it('nests italic inside an empty bold instead of stripping the bold', () => {
+    const r = wrapSelection('h****o', S(3, 3), '*', '*');
+    expect(r.content).toBe('h******o');
+    expect(r.selection).toEqual(S(4, 4));
+  });
+  it('nests italic inside bold instead of stripping the bold', () => {
+    const r = wrapSelection('hello **world**\n', S(8, 13), '*', '*');
+    expect(r.content).toBe('hello ***world***\n');
+    expect(r.selection).toEqual(S(9, 14));
+  });
+  it('removes bold from bold+italic, keeping the italic', () => {
+    const r = wrapSelection('hello ***world***\n', S(9, 14), '**', '**');
+    expect(r.content).toBe('hello *world*\n');
+    expect(r.selection).toEqual(S(7, 12));
+  });
 });
 
 describe('toggleHeading', () => {

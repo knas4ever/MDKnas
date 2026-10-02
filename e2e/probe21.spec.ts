@@ -78,6 +78,73 @@ test('raw mode: bold on a selection in a CRLF document', async () => {
   await app.close();
 });
 
+test('raw mode: bold then italic at the caret keeps the bold', async () => {
+  const { app, win, file } = await boot('hello world\n');
+  await win.keyboard.press('Control+End');
+  await win.keyboard.press('ArrowLeft');
+  await win.waitForTimeout(200);
+
+  await win.getByTitle('Bold (Ctrl+B)').click();
+  await win.waitForTimeout(400);
+  const afterBold = await taState(win);
+  console.log('AFTER-BOLD:', JSON.stringify(afterBold));
+  expect(afterBold.v).toBe('hello world****\n');
+  expect(afterBold.start).toBe(13);
+
+  await win.getByTitle('Italic (Ctrl+I)').click();
+  await win.waitForTimeout(400);
+  const afterItalic = await taState(win);
+  console.log('AFTER-ITALIC:', JSON.stringify(afterItalic));
+  // The bold must survive: the italic pair nests inside it.
+  expect(afterItalic.v).toBe('hello world******\n');
+  expect(afterItalic.start).toBe(14);
+  expect(afterItalic.hasFocus).toBe(true);
+
+  await win.keyboard.press('Control+s');
+  await win.waitForTimeout(600);
+  console.log('FILE:', JSON.stringify(fs.readFileSync(file, 'utf8')));
+  expect(fs.readFileSync(file, 'utf8')).toBe('hello world******\n');
+  await app.close();
+});
+
+const richCaret = (win: any) => win.evaluate(() => {
+  const s = window.getSelection();
+  if (!s || s.rangeCount === 0) return null;
+  const r = s.getRangeAt(0);
+  const n = r.startContainer;
+  const p = n && n.parentElement;
+  return {
+    s: p && p.getAttribute('data-s'),
+    o: r.startOffset,
+    gap: p && p.getAttribute('data-gap')
+  };
+});
+
+test('rich mode: bold then italic at the caret keeps the bold', async () => {
+  const file = tempDoc('hello world\n');
+  const app = await electron.launch({ args: ['.', '--open', file] });
+  const win = await app.firstWindow();
+  await win.waitForSelector('.wysiwyg-root');
+  await win.waitForTimeout(400);
+  await win.locator('.wysiwyg-root').first().click();
+  await win.keyboard.press('Control+Home');
+  for (let i = 0; i < 11; i++) await win.keyboard.press('ArrowRight');
+  await win.waitForTimeout(300);
+  console.log('RICH CARET:', JSON.stringify(await richCaret(win)));
+  await win.getByTitle('Bold (Ctrl+B)').click();
+  await win.waitForTimeout(400);
+  console.log('RICH AFTER-BOLD:', JSON.stringify(await richCaret(win)), JSON.stringify(await win.locator('.wysiwyg-root').textContent()));
+  await win.getByTitle('Italic (Ctrl+I)').click();
+  await win.waitForTimeout(400);
+  console.log('RICH AFTER-ITALIC:', JSON.stringify(await richCaret(win)), JSON.stringify(await win.locator('.wysiwyg-root').textContent()));
+  await win.keyboard.press('Control+s');
+  await win.waitForTimeout(700);
+  const t = fs.readFileSync(file, 'utf8');
+  console.log('RICH-FILE:', JSON.stringify(t));
+  expect(t).toBe('hello ***world***\n');
+  await app.close();
+});
+
 test('raw mode: bold with an empty selection keeps the caret in place', async () => {
   const { app, win, file } = await boot('hello world\n');
   await win.keyboard.press('Control+End');

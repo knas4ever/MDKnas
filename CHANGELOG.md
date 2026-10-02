@@ -7,6 +7,11 @@ Version numbers are the build date: `ÅÅÅÅ.M.D`.
 ### Features
 
 ### Fixes
+- **Stacking styles** — pressing Italic on text that is already bold (or Bold
+  on italic text) now nests the new style instead of stripping one character
+  of the existing marker: `**word**` + Italic gives `***word***`, and pressing
+  the same style a second time still removes it. This also covers the caret
+  inside a fresh empty pair.
 - **Raw markdown mode formatting** — Bold/Italic/etc. from the toolbar or the
   Format menu now act on the text you selected in the raw source view (the
   textarea's selection was ignored, so markers landed at the document start),

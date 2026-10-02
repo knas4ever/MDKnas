@@ -136,15 +136,33 @@ export function autoPairInsert(
   return insertText(content, sel, text);
 }
 
+// How many consecutive `marker` copies sit immediately left (or right) of a
+// position.
+function markerRun(content: string, at: number, marker: string, left: boolean): number {
+  let n = 0;
+  while (n < 8) {
+    const from = left ? at - marker.length * (n + 1) : at + marker.length * n;
+    const to = left ? at - marker.length * n : at + marker.length * (n + 1);
+    if (content.slice(from, to) !== marker) break;
+    n++;
+  }
+  return n;
+}
+
 export function wrapSelection(
   content: string,
   sel: Selection,
   prefix: string,
   suffix: string
 ): { content: string; selection: Selection } {
-  const before = content.slice(sel.start - prefix.length, sel.start);
-  const after = content.slice(sel.end, sel.end + suffix.length);
-  if (before === prefix && after === suffix) {
+  // Only undo when the selection is wrapped by exactly one copy of this
+  // marker. A longer run must nest instead of having one character stripped:
+  // Italic on a bold word adds the italic pair inside the bold, and an empty
+  // caret inside a fresh bold pair is not an italic pair either.
+  const ownPair =
+    markerRun(content, sel.start, prefix, true) === 1 &&
+    markerRun(content, sel.end, suffix, false) === 1;
+  if (ownPair) {
     const next =
       content.slice(0, sel.start - prefix.length) +
       content.slice(sel.start, sel.end) +
@@ -152,15 +170,10 @@ export function wrapSelection(
     const start = sel.start - prefix.length;
     return { content: next, selection: { start, end: start + (sel.end - sel.start) } };
   }
-  let s = sel.start;
-  let e = sel.end;
-  if (content.slice(s - prefix.length, s) === prefix && content.slice(e, e + suffix.length) === suffix) {
-    s -= prefix.length;
-    e += suffix.length;
-  }
-  const next = content.slice(0, s) + prefix + content.slice(s, e) + suffix + content.slice(e);
-  const start = s + prefix.length;
-  return { content: next, selection: { start, end: start + (e - s) } };
+  const next =
+    content.slice(0, sel.start) + prefix + content.slice(sel.start, sel.end) + suffix + content.slice(sel.end);
+  const start = sel.start + prefix.length;
+  return { content: next, selection: { start, end: start + (sel.end - sel.start) } };
 }
 
 export function toggleHeading(
