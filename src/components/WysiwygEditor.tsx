@@ -799,14 +799,24 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
           apply({ content, selection: { start: src, end: src } });
           return;
         }
-        const tn = realTextNodeOf(leaf, down);
-        if (!tn) return;
+        const directionalTarget = realTextNodeOf(leaf, down);
+        const firstTarget = realTextNodeOf(leaf, true);
+        if (!directionalTarget || !firstTarget) return;
+        // Moving up into an item that starts with inline markup must enter
+        // its first editable text span, not the trailing text span.
+        const entersLeadingMarkup =
+          !down && leaf.tagName === 'LI' && firstTarget !== directionalTarget;
+        const tn = entersLeadingMarkup ? firstTarget : directionalTarget;
+        const targetLeft = rectOfText(tn).left;
+        const useLogicalColumn =
+          entersLeadingMarkup ||
+          use.hasAttribute('data-blank-line') ||
+          Math.abs(targetLeft - currentLeft) > 1;
         // Keep the horizontal position relative to the editable text
         // column. Lists and task items are indented, so an absolute screen x
         // would move the caret right every time it crossed their boundary.
-        const targetLeft = rectOfText(tn).left;
         const targetOffset =
-          use.hasAttribute('data-blank-line') || Math.abs(targetLeft - currentLeft) > 1
+          useLogicalColumn
             ? Math.min(preferredOffset, (tn.nodeValue ?? '').length)
             : charOffsetAtX(tn, targetLeft + Math.max(0, cr.left - currentLeft));
         const span = tn.parentElement;

@@ -18,7 +18,8 @@ Version numbers are the build date: `ÅÅÅÅ.M.D`.
   association now opens the clicked file instead of restoring only the last
   folder.
 - **Vertical movement across lists** — moving between headings and indented
-  list or task text with Up/Down now preserves the caret column.
+  list or task text with Up/Down now preserves the caret column, including
+  items that begin with inline code.
 
 ## 2026.9.30
 

@@ -315,6 +315,33 @@ test('upward movement through a list returns to the heading column', async () =>
   await app.close();
 });
 
+test('upward movement enters inline-code list text at the matching column', async () => {
+  const file = tempDoc('- `docker-compose` v1\n- Django app container');
+  const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'mdeditor-profile-'));
+  const app = await electron.launch({ args: ['.', '--open', file, `--user-data-dir=${profile}`] });
+  const win = await app.firstWindow();
+  await win.waitForSelector('.wysiwyg-root');
+  await win.waitForTimeout(1000);
+
+  await win.locator('.wysiwyg-root').evaluate(el => {
+    const text = el.querySelector<HTMLElement>('li:last-child span:not([data-gap])')!.firstChild!;
+    const range = document.createRange();
+    range.setStart(text, 0);
+    range.collapse(true);
+    const selection = window.getSelection()!;
+    selection.removeAllRanges();
+    selection.addRange(range);
+  });
+  await win.keyboard.press('ArrowUp');
+  await win.keyboard.type('X');
+
+  await expect
+    .poll(async () => fs.readFileSync(file, 'utf-8'), { timeout: 5000 })
+    .toBe('- `Xdocker-compose` v1\n- Django app container');
+
+  await app.close();
+});
+
 test('starting without a file gives an untitled document and Ctrl+N clears it', async () => {
   const app = await electron.launch({ args: ['.'] });
   const win = await app.firstWindow();
