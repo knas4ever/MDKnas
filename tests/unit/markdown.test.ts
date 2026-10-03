@@ -73,9 +73,15 @@ describe('renderMarkdown', () => {
     expect(html).toContain('<span class="src-only"><span data-gap data-s="22" data-e="25">');
   });
 
+  it('anchors every marker of a nested quote line as a prefix gap', () => {
+    const html = renderMarkdown('> quoted\n> > deep\n');
+    expect(html).toContain('<span data-gap="prefix" data-s="9" data-e="13">');
+    expect(html).toContain('<span data-s="13" data-e="17">deep</span>');
+  });
+
   it('renders an nbsp anchor in empty table cells', () => {
     const html = renderMarkdown('| a | b |\n|---|---|\n|  |  |');
-    expect(html).toContain('<td><span data-gap data-s="7" data-e="21">');
+    expect(html).toContain('<td><span data-gap="prefix" data-s="7" data-e="21">');
     expect(html).toContain('<span data-s="21" data-e="21">\u00a0</span></td>');
     expect(html).toContain('<span data-s="24" data-e="24">\u00a0</span></td>');
   });
@@ -140,9 +146,9 @@ describe('renderMarkdown', () => {
   it('renders tables', () => {
     const html = renderMarkdown('| a | b |\n|---|---|\n| 1 | 2 |');
     expect(html).toContain('<table data-bi="0" data-s="0" data-e="29">');
-    expect(html).toContain('<th><span data-gap data-s="0" data-e="2">');
+    expect(html).toContain('<th><span data-gap="prefix" data-s="0" data-e="2">');
     expect(html).toContain('<span data-s="2" data-e="3">a</span>');
-    expect(html).toContain('<td><span data-gap data-s="7" data-e="22">');
+    expect(html).toContain('<td><span data-gap="prefix" data-s="7" data-e="22">');
     expect(html).toContain('<span data-s="22" data-e="23">1</span>');
   });
 

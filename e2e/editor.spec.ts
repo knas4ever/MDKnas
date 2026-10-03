@@ -897,3 +897,53 @@ test('the caret stays visible at the first position of a line', async () => {
 
   await app.close();
 });
+
+test('pressing left at a line start never types in front of hidden markup', async () => {
+  const base = 'para1\n\npara2\n\n# Hello\n\n- item\n\n| a | b |\n|---|---|\n| 1 | 2 |\n';
+  for (const [sel, keep, forbid] of [
+    ['h1', /# Hello/, /X#/],
+    ['li', /- item/, /X-/],
+    ['th', /\| X?a \|/, /X\|/]
+  ]) {
+    const file = tempDoc(base);
+    const app = await electron.launch({ args: ['.', '--open', file] });
+    const win = await app.firstWindow();
+    await win.waitForSelector('.wysiwyg-root');
+    await win.waitForTimeout(700);
+
+    const at = await win.evaluate(async (s: string) => {
+      const el = document.querySelector(s);
+      if (!el) return null;
+      const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      let n: Node | null;
+      let t: Text | null = null;
+      while ((n = w.nextNode()) !== null) {
+        const tt = n as Text;
+        if ((tt.parentElement as Element | null)?.getAttribute('data-gap') === null) { t = tt; break; }
+      }
+      if (!t) return null;
+      const rg = document.createRange();
+      rg.setStart(t, 0);
+      rg.setEnd(t, 1);
+      const r = rg.getBoundingClientRect();
+      return JSON.stringify({ x: r.left, y: r.top + r.height / 2 });
+    }, sel);
+    if (!at) { await app.close(); continue; }
+    const p = JSON.parse(at);
+    await win.mouse.move(p.x + 1, p.y);
+    await win.mouse.click(p.x + 1, p.y);
+    await win.waitForTimeout(400);
+    await win.keyboard.press('ArrowLeft');
+    await win.keyboard.press('ArrowLeft');
+    await win.waitForTimeout(400);
+    await win.keyboard.type('X');
+    await win.waitForTimeout(600);
+    await win.keyboard.press('Control+s');
+    await win.waitForTimeout(900);
+    const text = fs.readFileSync(file, 'utf-8');
+    expect(text).toMatch(keep);
+    expect(forbid.test(text)).toBe(false);
+
+    await app.close();
+  }
+});

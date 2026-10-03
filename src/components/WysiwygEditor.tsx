@@ -136,7 +136,7 @@ function lineUnitOf(node: Node, root: HTMLElement): HTMLElement | null {
   while (el && el !== root) {
     if (el.hasAttribute('data-blank-line')) return el as HTMLElement;
     const tag = el.tagName;
-    if (tag === 'P' || tag === 'LI' || tag === 'PRE' || tag === 'BLOCKQUOTE' || tag === 'TD' || /^H[1-6]$/.test(tag)) {
+    if (tag === 'P' || tag === 'LI' || tag === 'PRE' || tag === 'BLOCKQUOTE' || tag === 'TD' || tag === 'TH' || /^H[1-6]$/.test(tag)) {
       return el as HTMLElement;
     }
     el = el.parentElement;
@@ -147,7 +147,7 @@ function lineUnitOf(node: Node, root: HTMLElement): HTMLElement | null {
 // Leaf line units render real text lines; the others group them.
 function isLeafUnit(el: Element): boolean {
   const tag = el.tagName;
-  return tag === 'P' || tag === 'LI' || tag === 'PRE' || tag === 'TD' || /^H[1-6]$/.test(tag);
+  return tag === 'P' || tag === 'LI' || tag === 'PRE' || tag === 'TD' || tag === 'TH' || /^H[1-6]$/.test(tag);
 }
 function isUnit(el: Element): boolean {
   return el.hasAttribute('data-blank-line') || isLeafUnit(el) ||
@@ -159,7 +159,7 @@ function leafOf(unit: HTMLElement, first: boolean): HTMLElement | null {
   if (unit.hasAttribute('data-blank-line')) return unit;
   if (isLeafUnit(unit)) return unit;
   if (unit.tagName === 'TABLE') {
-    const tds = unit.querySelectorAll('td');
+    const tds = unit.querySelectorAll('td, th');
     return tds.length ? (tds[first ? 0 : tds.length - 1] as HTMLElement) : null;
   }
   const kids = Array.from(unit.children).filter(c => isUnit(c));
@@ -309,6 +309,43 @@ function followingCodeBlock(unit: HTMLElement, root: HTMLElement): HTMLElement |
     el = el.parentElement;
   }
   return null;
+}
+
+// True when a block's first real text is preceded by stripped line markup:
+// a heading's "## ", a list marker, a quote's "> ", a table cell's pipes.
+// The caret must never sit inside that markup: typing there would destroy
+// the block ("X# Heading", "X| cell |", "X- item").
+function startsAfterMarkup(unit: HTMLElement, first: Text): boolean {
+  const walker = document.createTreeWalker(unit, NodeFilter.SHOW_TEXT);
+  let n: Node | null;
+  while ((n = walker.nextNode()) !== null) {
+    const t = n as Text;
+    if (t === first) return false;
+    if (t.parentElement?.getAttribute('data-gap') === 'prefix') return true;
+  }
+  return false;
+}
+
+// Like precedingEditableSourceEnd but skipping blank-line divs: the end of
+// a blank line is the start of the next source line, which for a markup-led
+// line is inside the hidden markup, so landing there would let a keystroke
+// slip in front of the marker.
+function precedingRealTextEnd(root: HTMLElement, block: HTMLElement): number | null {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let end: number | null = null;
+  let node: Node | null;
+  while ((node = walker.nextNode()) !== null) {
+    const text = node as Text;
+    if (block.contains(text)) break;
+    if (!(text.nodeValue ?? '').length) continue;
+    const parent = text.parentElement;
+    if (parent?.closest('.src-only') || parent?.getAttribute('data-gap') != null) continue;
+    if (parent?.closest('[data-blank-line]')) continue;
+    const span = parent?.closest<HTMLElement>('[data-s]');
+    const value = Number(span?.dataset.e ?? '-1');
+    if (Number.isInteger(value) && value >= 0) end = value;
+  }
+  return end;
 }
 
 function rectOfText(node: Text): DOMRect {
@@ -842,6 +879,7 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
         if (!root || !sel || sel.rangeCount === 0) return;
         const range = sel.getRangeAt(0);
         if (!range.collapsed) return;
+        const caret = effectiveSelection();
         // Step over a whole emphasis run in one press, so leaving styled text
         // costs a single key regardless of the marker length. Code keeps its
         // literal characters, so it is excluded.
@@ -850,12 +888,40 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
             ? (range.startContainer as Element)
             : range.startContainer.parentElement)?.closest('pre code') != null;
         if (!inCode) {
-          const caret = effectiveSelection();
           const to =
             caret.start === caret.end ? markupStep(content, caret.start, 'left') : caret.start;
           if (to !== caret.start) {
             e.preventDefault();
             apply({ content, selection: { start: to, end: to } });
+            return;
+          }
+        }
+        // The caret sits at (or inside the hidden markup in front of) the
+        // first visible character of its line. Never let it step into that
+        // markup: a heading, list item or quote crosses to the end of the
+        // previous block's text, a table cell keeps its place (the caret
+        // cannot leave a cell sideways).
+        const unit = lineUnitOf(range.startContainer, root);
+        if (unit && isLeafUnit(unit) && unit.tagName !== 'PRE') {
+          const first = realTextNodeOf(unit, true);
+          const atFirstVisible =
+            first !== null &&
+            range.startContainer === first &&
+            range.startOffset === 0;
+          const inMarkup =
+            range.startContainer.nodeType === Node.TEXT_NODE &&
+            (range.startContainer as Text).parentElement?.getAttribute('data-gap') === 'prefix';
+          if (first !== null && (atFirstVisible || inMarkup) && startsAfterMarkup(unit, first)) {
+            e.preventDefault();
+            const cell = unit.tagName === 'TD' || unit.tagName === 'TH';
+            const pos = cell ? null : precedingRealTextEnd(root, unit);
+            apply({
+              content,
+              selection: {
+                start: pos === null ? caret.start : pos,
+                end: pos === null ? caret.end : pos
+              }
+            });
             return;
           }
         }

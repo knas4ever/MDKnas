@@ -455,8 +455,16 @@ export function renderMarkdown(
     const lt = lineText(paraLs + rel);
     let gap = 0;
     if (quotePrefix > 0) {
-      const q = lt.match(/^>[\t ]?/);
-      if (q) gap += q[0].length;
+      // One "> " per open quote level: a nested quote ("> > deep") carries
+      // a marker per level, and leaving one of them inside the text span
+      // would let the caret type in front of it.
+      let rest0 = lt;
+      for (let k = 0; k < quoteStack.length; k++) {
+        const q = rest0.match(/^>[\t ]?/);
+        if (!q) break;
+        gap += q[0].length;
+        rest0 = rest0.slice(q[0].length);
+      }
     }
     if (listPrefix > 0) {
       const rest = lt.slice(gap);
@@ -504,8 +512,11 @@ export function renderMarkdown(
   // Like emitCovered but returns the markup instead of appending it, so a
   // table cell can place its leading gap INSIDE the cell element. Blank
   // line divs cannot occur inside a table row, so a plain gap is enough.
+  // The gap is a line prefix: it anchors the row start, the pipes and the
+  // padding before the cell text, and a caret must never type inside that
+  // markup (it would break the table), so it snaps to the cell's text.
   const cellGap = (upTo: number): string => {
-    const out = upTo > covered ? gapSpan(covered, upTo) : '';
+    const out = upTo > covered ? gapSpan(covered, upTo, true) : '';
     covered = Math.max(covered, upTo);
     return out;
   };

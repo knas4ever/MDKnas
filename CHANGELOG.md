@@ -9,10 +9,24 @@ Version numbers are the build date: `ÅÅÅÅ.M.D`.
   position of a heading, a list item or a table cell. Those lines start with
   a zero-width source-coverage span (the stripped `## `, `- `, `1. ` marker
   or the cell's pipes), and an arrow press from the first visible character
-  parks the caret inside it. The spans kept `line-height: 0` so a leaked one
-  still cannot open a phantom line box, but they no longer collapse to
+  parked the caret inside it. The spans still keep `line-height: 0` so a
+  leaked one cannot open a phantom line box, but they no longer collapse to
   `font-size: 0`: the browser paints the caret as tall as the font at the
   caret's position, so it now shows at the correct x with the line's height.
+- **Typing in front of hidden markup** — with the caret visible it became
+  possible to step left of a heading's `#`, a list marker or a table cell's
+  pipes and type there, producing `X# Heading`, `X- item` or `X| cell |` and
+  destroying the block. A caret at the first visible character of such a
+  line no longer steps into the markup: headings, list items and quotes
+  cross straight to the end of the previous block's text (the blank line's
+  end is indistinguishable from the start of the markup), and a table cell
+  keeps its place, since the caret cannot leave a cell sideways.
+- **Nested quote markers** — a nested quote line (`> > deep`) only anchored
+  the outer `> ` as hidden markup, so the caret and typing landed in front
+  of the inner one. One `> ` per open quote level is now covered.
+- **Header cells as line units** — `th` cells were not recognised as a
+  caret's line unit, so arrow navigation treated them as plain text and
+  could leave the cell; they now behave exactly like `td` cells.
 
 ## 2026.10.2
 
