@@ -27,6 +27,12 @@ Version numbers are the build date: `ÅÅÅÅ.M.D`.
 - **Header cells as line units** — `th` cells were not recognised as a
   caret's line unit, so arrow navigation treated them as plain text and
   could leave the cell; they now behave exactly like `td` cells.
+- **Table navigation** — arrow keys inside a table moved to the neighbouring
+  cell in the DOM, which for up/down is the previous/next cell of the same
+  row, and left/right at a cell edge escaped the table. They now follow the
+  grid: up/down stay in the same column and change row, left/right step
+  through the cells in reading order, and at the table's first/last cell the
+  caret leaves the table to the text before/after it.
 
 ## 2026.10.2
 

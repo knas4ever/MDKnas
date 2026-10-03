@@ -348,6 +348,77 @@ function precedingRealTextEnd(root: HTMLElement, block: HTMLElement): number | n
   return end;
 }
 
+// Mirror image of precedingRealTextEnd: the first visible text after a
+// block, skipping blank lines and coverage gaps.
+function followingRealTextStart(root: HTMLElement, block: HTMLElement): number | null {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let past = false;
+  let node: Node | null;
+  while ((node = walker.nextNode()) !== null) {
+    const text = node as Text;
+    if (block.contains(text)) {
+      past = true;
+      continue;
+    }
+    if (!past) continue;
+    if (!(text.nodeValue ?? '').length) continue;
+    const parent = text.parentElement;
+    if (parent?.closest('.src-only') || parent?.getAttribute('data-gap') != null) continue;
+    if (parent?.closest('[data-blank-line]')) continue;
+    const span = parent?.closest<HTMLElement>('[data-s]');
+    const value = Number(span?.dataset.s ?? '-1');
+    if (Number.isInteger(value) && value >= 0) return value;
+  }
+  return null;
+}
+
+function isCell(el: Element): boolean {
+  return el.tagName === 'TD' || el.tagName === 'TH';
+}
+
+// The neighbouring cell of a table cell in reading order: the previous/next
+// cell of the row, wrapping through the rows when the row runs out. Null at
+// the table's first/last cell, where the caret leaves the table instead.
+function adjacentCell(unit: HTMLElement, back: boolean): HTMLElement | null {
+  const table = unit.closest('table');
+  if (!table) return null;
+  const cells = Array.from(table.querySelectorAll('tr')).flatMap(
+    (r) => Array.from(r.children).filter((c) => isCell(c)) as HTMLElement[]
+  );
+  const i = cells.indexOf(unit);
+  if (i < 0) return null;
+  const j = back ? i - 1 : i + 1;
+  return j >= 0 && j < cells.length ? cells[j] : null;
+}
+
+// The cell of the adjacent row, in the same column (clamped when the rows
+// have different widths). Null at the table's first/last row.
+function adjacentRowCell(unit: HTMLElement, up: boolean): HTMLElement | null {
+  const table = unit.closest('table');
+  const row = unit.parentElement;
+  if (!table || !row || !isCell(unit)) return null;
+  const rows = Array.from(table.querySelectorAll('tr'));
+  const ri = rows.indexOf(row as HTMLTableRowElement);
+  if (ri < 0) return null;
+  const ti = up ? ri - 1 : ri + 1;
+  if (ti < 0 || ti >= rows.length) return null;
+  const cols = Array.from(row.children).filter((c) => isCell(c)) as HTMLElement[];
+  const target = Array.from(rows[ti].children).filter((c) => isCell(c)) as HTMLElement[];
+  if (!target.length) return null;
+  const ci = cols.indexOf(unit);
+  return target[Math.min(Math.max(ci, 0), target.length - 1)];
+}
+
+// The source position of a cell's first or last visible character.
+function cellTextPos(cell: HTMLElement, atEnd: boolean): number | null {
+  const t = realTextNodeOf(cell, !atEnd);
+  if (!t) return null;
+  const span = t.parentElement?.closest<HTMLElement>('[data-s]');
+  if (!span) return null;
+  const value = Number((atEnd ? span.dataset.e : span.dataset.s) ?? '-1');
+  return Number.isInteger(value) && value >= 0 ? value : null;
+}
+
 function rectOfText(node: Text): DOMRect {
   const r = document.createRange();
   r.setStart(node, 0);
@@ -913,8 +984,14 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
             (range.startContainer as Text).parentElement?.getAttribute('data-gap') === 'prefix';
           if (first !== null && (atFirstVisible || inMarkup) && startsAfterMarkup(unit, first)) {
             e.preventDefault();
-            const cell = unit.tagName === 'TD' || unit.tagName === 'TH';
-            const pos = cell ? null : precedingRealTextEnd(root, unit);
+            const cell = isCell(unit);
+            // A cell steps back to the previous cell's text (reading order);
+            // at the row's start it leaves the table and lands on the text
+            // before it. Headings, list items and quotes do the same.
+            const prevCell = cell ? adjacentCell(unit, true) : null;
+            const pos = prevCell
+              ? cellTextPos(prevCell, false)
+              : precedingRealTextEnd(root, cell ? (unit.closest('table') ?? unit) : unit);
             apply({
               content,
               selection: {
@@ -961,6 +1038,33 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
             return;
           }
         }
+        // A caret at the last visible character of a cell must not step into
+        // the pipes: it moves to the next cell in reading order, or leaves
+        // the table after the last one.
+        const cellUnit = lineUnitOf(range.startContainer, root);
+        if (cellUnit && isCell(cellUnit)) {
+          const last = realTextNodeOf(cellUnit, false);
+          const atLastVisible =
+            last !== null &&
+            range.startContainer === last &&
+            range.startOffset === (last.nodeValue ?? '').length;
+          if (atLastVisible) {
+            e.preventDefault();
+            const next = adjacentCell(cellUnit, false);
+            const pos = next
+              ? cellTextPos(next, false)
+              : followingRealTextStart(root, cellUnit.closest('table') ?? cellUnit);
+            const caret = effectiveSelection();
+            apply({
+              content,
+              selection: {
+                start: pos === null ? caret.end : pos,
+                end: pos === null ? caret.end : pos
+              }
+            });
+            return;
+          }
+        }
         const unit = lineUnitOf(range.startContainer, root);
         if (!unit) return;
         const last = realTextNodeOf(unit, false);
@@ -990,6 +1094,7 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
         const range = sel.getRangeAt(0);
         const use = lineUnitOf(range.startContainer, root);
         if (!use) return;
+        const useCell = isCell(use);
         const down = e.key === 'ArrowDown';
         const cr = range.getBoundingClientRect();
         // Zero-width coverage gaps at a block's edge create phantom line
@@ -1004,9 +1109,11 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
           const onBoundaryLine = down ? cr.bottom >= refRect.bottom - 4 : cr.top <= refRect.top + 4;
           if (!onBoundaryLine) return; // let the native move handle intra-unit
         }
-        const target = adjacentUnit(use, root, down);
+        const target = useCell
+          ? adjacentRowCell(use, !down) ?? adjacentUnit(use.closest('table') ?? use, root, down)
+          : adjacentUnit(use, root, down);
         if (!target) return;
-        const leaf = leafOf(target, down);
+        const leaf = isCell(target) ? target : leafOf(target, down);
         if (!leaf) return;
         const current =
           range.startContainer.nodeType === Node.TEXT_NODE &&

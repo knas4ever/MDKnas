@@ -947,3 +947,58 @@ test('pressing left at a line start never types in front of hidden markup', asyn
     await app.close();
   }
 });
+
+test('arrow keys walk tables by cell, row and column', async () => {
+  const file = tempDoc('above\n\n| a | b | c |\n| --- | --- | --- |\n| 1 | 2 | 3 |\n\nbelow\n');
+  const app = await electron.launch({ args: ['.', '--open', file] });
+  const win = await app.firstWindow();
+  await win.waitForSelector('.wysiwyg-root');
+  await win.waitForTimeout(700);
+
+  const cellText = async () =>
+    (
+      await win.evaluate(async (): Promise<string> => {
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return '';
+        const r = sel.getRangeAt(0);
+        const el = r.startContainer.nodeType === 3 ? r.startContainer.parentElement : (r.startContainer as Element);
+        const cell = el?.closest('td, th');
+        if (!cell) return '';
+        return (cell.textContent ?? '').replace(/[\u200b\u00a0]/g, '');
+      })
+    ).trim();
+
+  const at = await win.evaluate(async (): Promise<string> => {
+    const el = document.querySelectorAll('td')[1]!;
+    const span = Array.from(el.querySelectorAll('span')).find((x) => !x.hasAttribute('data-gap'));
+    if (!span) return '';
+    const rg = document.createRange();
+    rg.setStart(span.firstChild!, 0);
+    rg.setEnd(span.firstChild!, 1);
+    const r = rg.getBoundingClientRect();
+    return JSON.stringify({ x: r.left + 1, y: r.top + r.height / 2 });
+  });
+  const p = JSON.parse(at);
+  await win.mouse.move(p.x, p.y);
+  await win.mouse.click(p.x, p.y);
+  await win.waitForTimeout(400);
+  expect(await cellText()).toBe('2');
+
+  await win.keyboard.press('ArrowUp');
+  await win.waitForTimeout(300);
+  expect(await cellText()).toBe('b');
+  await win.keyboard.press('ArrowLeft');
+  await win.waitForTimeout(300);
+  expect(await cellText()).toBe('a');
+  await win.keyboard.press('ArrowRight');
+  await win.waitForTimeout(300);
+  expect(await cellText()).toBe('b');
+  await win.keyboard.press('ArrowDown');
+  await win.waitForTimeout(300);
+  expect(await cellText()).toBe('2');
+  await win.keyboard.press('ArrowLeft');
+  await win.waitForTimeout(300);
+  expect(await cellText()).toBe('1');
+
+  await app.close();
+});
