@@ -33,6 +33,12 @@ Version numbers are the build date: `ÅÅÅÅ.M.D`.
   grid: up/down stay in the same column and change row, left/right step
   through the cells in reading order, and at the table's first/last cell the
   caret leaves the table to the text before/after it.
+- **Caret scrolls out of view** — walking down a document taller than the
+  window pushed the caret below the visible area: a programmatic caret
+  placement (`addRange`) does not scroll the container the way a native
+  caret move or typing does, so the cursor looked like it had left focus,
+  and only a left/right press snapped it back. The caret's line is now
+  scrolled into view after every caret placement.
 
 ## 2026.10.2
 

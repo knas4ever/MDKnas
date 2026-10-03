@@ -372,6 +372,38 @@ function followingRealTextStart(root: HTMLElement, block: HTMLElement): number |
   return null;
 }
 
+// The caret's line element: the nearest leaf unit, so scrolling centres on
+// the line the caret actually sits on rather than on a whole block.
+function caretLineElement(node: Node, root: HTMLElement): HTMLElement {
+  return lineUnitOf(node, root) ?? root;
+}
+
+// A programmatic caret placement (addRange) does not scroll the container
+// the way a native caret move or typing does, so walking down a document
+// that is taller than the window pushes the caret out of view and the
+// cursor looks like it vanished. Bring the caret's line back into view.
+function scrollCaretIntoView(root: HTMLElement): void {
+  // Range#getBoundingClientRect and scrollIntoView are unavailable in the
+  // jsdom used by the unit tests, so everything is best-effort.
+  try {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const r = sel.getRangeAt(0);
+    if (!root.contains(r.startContainer)) return;
+    const cr = document.createRange();
+    cr.setStart(r.startContainer, r.startOffset);
+    cr.setEnd(r.startContainer, r.startOffset);
+    const rect = cr.getBoundingClientRect();
+    const rootRect = root.getBoundingClientRect();
+    const viewTop = Math.max(0, rootRect.top);
+    const viewBottom = Math.min(window.innerHeight, rootRect.bottom);
+    if (rect.top >= viewTop && rect.bottom <= viewBottom) return;
+    caretLineElement(r.startContainer, root).scrollIntoView({ block: 'center', inline: 'nearest' });
+  } catch {
+    /* no layout in this environment: the caret stays where it is */
+  }
+}
+
 function isCell(el: Element): boolean {
   return el.tagName === 'TD' || el.tagName === 'TH';
 }
@@ -635,6 +667,7 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
           endOffset: r.endOffset
         };
       }
+      scrollCaretIntoView(root);
     }
     if (typewriter) {
       const sel = window.getSelection();

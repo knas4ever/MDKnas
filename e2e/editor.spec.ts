@@ -1002,3 +1002,46 @@ test('arrow keys walk tables by cell, row and column', async () => {
 
   await app.close();
 });
+
+test('walking down a long document keeps the caret in view', async () => {
+  const doc = Array.from(Array(60), (_, i) => `line ${i + 1}`).join('\n\n');
+  const file = tempDoc(doc);
+  const app = await electron.launch({ args: ['.', '--open', file] });
+  const win = await app.firstWindow();
+  await win.waitForSelector('.wysiwyg-root');
+  await win.waitForTimeout(800);
+
+  const at = await win.evaluate(async (): Promise<string> => {
+    const p = document.querySelector('.wysiwyg-root p')!;
+    const sp = Array.from(p.querySelectorAll('span')).find((x) => !x.hasAttribute('data-gap'))!;
+    const rg = document.createRange();
+    rg.setStart(sp.firstChild!, 0);
+    rg.setEnd(sp.firstChild!, 1);
+    const r = rg.getBoundingClientRect();
+    return JSON.stringify({ x: r.left + 1, y: r.top + r.height / 2, vh: window.innerHeight });
+  });
+  const p = JSON.parse(at);
+  await win.mouse.move(p.x, p.y);
+  await win.mouse.click(p.x, p.y);
+  await win.waitForTimeout(300);
+
+  for (let i = 0; i < 40; i += 1) {
+    await win.keyboard.press('ArrowDown');
+    await win.waitForTimeout(60);
+    if (i % 8 === 7) {
+      const y = await win.evaluate(async (): Promise<number> => {
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return -99999;
+        const r = sel.getRangeAt(0);
+        const cr = document.createRange();
+        cr.setStart(r.startContainer, r.startOffset);
+        cr.setEnd(r.startContainer, r.startOffset);
+        return cr.getBoundingClientRect().top;
+      });
+      expect(y).toBeGreaterThanOrEqual(0);
+      expect(y).toBeLessThan(p.vh as number);
+    }
+  }
+
+  await app.close();
+});
