@@ -4,6 +4,18 @@ Version numbers are the build date: `ÅÅÅÅ.M.D`.
 
 ## 2026.10.3
 
+### Features
+- **Drawn caret** — the editor now draws the cursor: a 2px bar in the accent
+  colour, a little taller than the line's font, blinking on the browser's
+  cadence. The native caret is 1px and hard to spot (and paints nothing at
+  all inside the zero-width source-coverage spans), so its colour is
+  switched to transparent while the drawn bar is on screen and restored
+  whenever there is no caret to draw (a range selection).
+- **File-row pop-up menu** — the ⋮ actions in the folder tree no longer sit
+  inline in the row, where the 240px sidebar could not fit them: they open a
+  floating menu beside the sidebar, clamped to the window, with the usual
+  click-away layer and Escape to close it.
+
 ### Fixes
 - **Caret invisible at a line start** — the cursor vanished at the first
   position of a heading, a list item or a table cell. Those lines start with
@@ -39,6 +51,11 @@ Version numbers are the build date: `ÅÅÅÅ.M.D`.
   caret move or typing does, so the cursor looked like it had left focus,
   and only a left/right press snapped it back. The caret's line is now
   scrolled into view after every caret placement.
+- **Long names in the folder tree** — a file or folder name wider than the
+  sidebar could not shrink (a flex item's default `min-width: auto` is its
+  min-content width), so the row overflowed the sidebar's own scroll box and
+  pushed the ⋮ actions out of view. The name now shrinks and ellipsizes
+  (`min-w-0 truncate`), which keeps the row inside the sidebar.
 
 ## 2026.10.2
 

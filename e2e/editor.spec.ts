@@ -735,7 +735,10 @@ test('folder flow: file open from sidebar reloads when edited externally', async
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdeditor-e2e-'));
   fs.writeFileSync(path.join(dir, 'a.md'), 'alpha');
   fs.writeFileSync(path.join(dir, 'b.md'), 'beta');
-  const app = await electron.launch({ args: ['.', '--open-folder', dir] });
+  // A fresh profile: the app restores the previous session's folder, which
+  // would replace the folder under test.
+  const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'mdeditor-e2e-profile-'));
+  const app = await electron.launch({ args: ['.', '--open-folder', dir, `--user-data-dir=${profile}`] });
   const win = await app.firstWindow();
   await win.waitForSelector('.wysiwyg-root');
 
@@ -751,13 +754,70 @@ test('folder flow: file open from sidebar reloads when edited externally', async
   await app.close();
 });
 
+test('long names: the row menu pops up beside the sidebar', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdeditor-menu-'));
+  const long = 'a-very-long-markdown-file-name-that-overflows-the-sidebar.md';
+  fs.writeFileSync(path.join(dir, long), 'alpha');
+  // A fresh profile: the app restores the previous session's folder from
+  // settings, which would replace the folder under test.
+  const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'mdeditor-menu-profile-'));
+  const app = await electron.launch({ args: ['.', '--open-folder', dir, `--user-data-dir=${profile}`] });
+  const win = await app.firstWindow();
+  await win.waitForSelector('.wysiwyg-root');
+
+  // The tree is filled in asynchronously once the folder is watched.
+  await expect
+    .poll(async () => await win.evaluate(async (): Promise<number> => document.querySelectorAll('button[title="File actions"]').length), { timeout: 10000 })
+    .toBeGreaterThan(0);
+  await win.getByRole('button', { name: '⋮' }).click();
+  await win.waitForTimeout(300);
+
+  const box = await win.evaluate(async (): Promise<string> => {
+    const menu = document.querySelector('[aria-label="File actions"]');
+    if (!menu) return 'NO MENU';
+    const r = menu.getBoundingClientRect();
+    const side = document.querySelector('.sidebar') as HTMLElement;
+    return JSON.stringify({
+      x: Math.round(r.left),
+      right: Math.round(r.right),
+      bottom: Math.round(r.bottom),
+      vw: window.innerWidth,
+      vh: window.innerHeight,
+      sidebarRight: Math.round(side.getBoundingClientRect().right),
+      buttons: menu.children.length
+    });
+  });
+  const m = JSON.parse(box);
+  // The actions pop out over the sidebar edge instead of being squeezed
+  // into the row, so a long name can no longer push them out of view.
+  expect(m.buttons).toBe(3);
+  expect(m.right).toBeGreaterThan(m.sidebarRight);
+  expect(m.right).toBeLessThanOrEqual(m.vw);
+  expect(m.bottom).toBeLessThanOrEqual(m.vh);
+
+  // The pop-up is still wired to the actions: Delete needs no dialog, so it
+  // is the deterministic one to check.
+  await (await win.getByRole('menuitem', { name: 'Delete' })).click();
+  await expect
+    .poll(async () => !fs.existsSync(path.join(dir, long)), { timeout: 5000 })
+    .toBe(true);
+
+  await app.close();
+});
+
 test('subfolder file reloads on external edit', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdeditor-e2e-'));
   fs.mkdirSync(path.join(dir, 'sub'));
   fs.writeFileSync(path.join(dir, 'sub', 'a.md'), 'alpha');
-  const app = await electron.launch({ args: ['.', '--open-folder', dir] });
+  // A fresh profile: the app restores the previous session's folder, which
+  // would replace the folder under test.
+  const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'mdeditor-e2e-profile-'));
+  const app = await electron.launch({ args: ['.', '--open-folder', dir, `--user-data-dir=${profile}`] });
   const win = await app.firstWindow();
   await win.waitForSelector('.wysiwyg-root');
+  // Subfolders start collapsed: expand it before the file can be clicked.
+  await win.getByRole('button', { name: /sub\// }).click();
+  await win.waitForTimeout(300);
   await win.getByRole('button', { name: 'a.md' }).click();
   await expect(win.locator('.wysiwyg-root')).toContainText('alpha');
   fs.writeFileSync(path.join(dir, 'sub', 'a.md'), 'alpha changed');
@@ -770,7 +830,10 @@ test('subfolder file reloads on external edit', async () => {
 test('external edit via temp-file+rename reloads the doc', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mdeditor-e2e-'));
   fs.writeFileSync(path.join(dir, 'a.md'), 'alpha');
-  const app = await electron.launch({ args: ['.', '--open-folder', dir] });
+  // A fresh profile: the app restores the previous session's folder, which
+  // would replace the folder under test.
+  const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'mdeditor-e2e-profile-'));
+  const app = await electron.launch({ args: ['.', '--open-folder', dir, `--user-data-dir=${profile}`] });
   const win = await app.firstWindow();
   await win.waitForSelector('.wysiwyg-root');
   await win.getByRole('button', { name: 'a.md' }).click();

@@ -404,6 +404,25 @@ function scrollCaretIntoView(root: HTMLElement): void {
   }
 }
 
+// Position the drawn caret bar over the caret and report whether one could
+// be drawn: a range selection has no caret, and jsdom has no layout, so in
+// both cases the caller leaves the native caret alone.
+function drawCaret(root: HTMLElement, overlay: HTMLElement): boolean {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return false;
+  const r = sel.getRangeAt(0);
+  if (!r.collapsed || !root.contains(r.startContainer)) return false;
+  if (r.startContainer.nodeType !== Node.TEXT_NODE) return false;
+  const rect = caretRect(r.startContainer as Text, r.startOffset);
+  if (rect.height <= 0) return false;
+  const rootRect = root.getBoundingClientRect();
+  overlay.style.left = `${Math.round(rect.left - rootRect.left)}px`;
+  overlay.style.top = `${Math.round(rect.top - rootRect.top - 1)}px`;
+  overlay.style.height = `${Math.round(rect.height * 1.08)}px`;
+  if (overlay.parentElement !== root) root.appendChild(overlay);
+  return true;
+}
+
 function isCell(el: Element): boolean {
   return el.tagName === 'TD' || el.tagName === 'TH';
 }
@@ -490,6 +509,7 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
   { content, selection, onChange, fontSize = 16, typewriter = false, file = null },
   ref
 ) {
+  const caretRef = useRef<HTMLDivElement | null>(null);
   const docDir = file ? file.slice(0, file.lastIndexOf('/')) : null;
   const assetsName = file
     ? `${file.slice(file.lastIndexOf('/') + 1).replace(/\.[^.]*$/, '')}_assets`
@@ -669,6 +689,26 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
       }
       scrollCaretIntoView(root);
     }
+    // Draw the caret bar last: the scroll above may have moved the text,
+    // and the coordinates must be taken from the final layout. Without a
+    // caret (a range selection, or no layout in jsdom) the bar is removed
+    // and the browser's own caret keeps its colour.
+    if (!caretRef.current) {
+      caretRef.current = document.createElement('div');
+      caretRef.current.className = 'caret';
+      // Not part of the editable content: the caret must never land inside
+      // the bar itself, which would map back to position 0.
+      caretRef.current.contentEditable = 'false';
+      caretRef.current.setAttribute('aria-hidden', 'true');
+    }
+    let drawn = false;
+    try {
+      drawn = drawCaret(root, caretRef.current);
+    } catch {
+      /* no layout in this environment */
+    }
+    if (!drawn && caretRef.current.parentElement === root) caretRef.current.remove();
+    root.style.caretColor = drawn ? 'transparent' : '';
     if (typewriter) {
       const sel = window.getSelection();
       if (sel && sel.anchorNode && root.contains(sel.anchorNode)) {

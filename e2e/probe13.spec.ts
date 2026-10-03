@@ -113,10 +113,14 @@ test('file in subfolder of open root reloads', async () => {
   const dir = '/tmp/p13s';
   require('node:fs').mkdirSync(dir + '/a', { recursive: true });
   writeFileSync(dir + '/a/b.md', 'sub one\n');
-  const app = await _electron.launch({ args: ['.', '--open-folder', dir] });
+  const profile = require('node:fs').mkdtempSync('/tmp/p13profile-');
+  const app = await _electron.launch({ args: ['.', '--open-folder', dir, `--user-data-dir=${profile}`] });
   const win = await app.firstWindow();
   await win.waitForSelector('.wysiwyg-root');
   await win.waitForTimeout(700);
+  // Subfolders start collapsed: expand it before the file can be clicked.
+  await win.getByText(/a\//).first().click();
+  await win.waitForTimeout(300);
   await win.getByText('b.md').first().click();
   await win.waitForSelector('.wysiwyg-root span');
   writeFileSync(dir + '/a/b.md', 'sub two changed\n');

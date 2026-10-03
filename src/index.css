@@ -10,11 +10,32 @@
   /* Left-aligned, not centred: the spare window width then sits on the right,
      where a sized image can use it instead of being dead space. */
   margin: 0;
+  /* Containing block for the drawn caret bar (see .caret below). */
+  position: relative;
   line-height: 1.65;
   font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
   caret-color: #3b82f6;
 }
 .wysiwyg-root:focus { outline: none; }
+
+/* The editor draws its own caret: the browser paints a 1px bar that is hard
+   to spot (and paints nothing at all inside the zero-width coverage spans
+   that anchor stripped markup). The drawn bar is wider, a touch taller than
+   the line's font and in the accent colour; while it is on screen the native
+   caret colour is switched to transparent in JS so the two do not blink out
+   of sync. */
+.wysiwyg-root .caret {
+  position: absolute;
+  width: 2px;
+  pointer-events: none;
+  background: var(--caret);
+  border-radius: 1px;
+  z-index: 5;
+  animation: caret-blink 1.06s steps(1, end) infinite;
+}
+@keyframes caret-blink {
+  50% { opacity: 0; }
+}
 
 .wysiwyg-root h1 { font-size: 1.9em; margin: 1.2em 0 0.6em; font-weight: 700; }
 .wysiwyg-root h2 { font-size: 1.5em; margin: 1.1em 0 0.5em; font-weight: 700; }
@@ -179,6 +200,7 @@
   --muted: #9ca3af;
   --border: #2d3038;
   --accent: #60a5fa;
+  --caret: #8ab8ff;
   --code-bg: #3a4150;
   --pre-bg: #23252c;
   --sidebar-bg: #1a1b20;
@@ -222,6 +244,7 @@
   --muted: #6b7280;
   --border: #e5e7eb;
   --accent: #2563eb;
+  --caret: #2563eb;
   --code-bg: #f3f4f6;
   --pre-bg: #f6f8fa;
   --sidebar-bg: #fafafa;

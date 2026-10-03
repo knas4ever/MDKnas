@@ -19,6 +19,11 @@ function hasMd(node: FileNode): boolean {
   return node.name.toLowerCase().endsWith('.md');
 }
 
+// Rough size of the pop-up menu; it is only used to keep the menu inside
+// the window when the row sits near an edge.
+const MENU_W = 112;
+const MENU_H = 116;
+
 export default function FileExplorer({
   tree,
   rootDir,
@@ -29,13 +34,28 @@ export default function FileExplorer({
   onDelete,
   ask
 }: Props) {
-  const [menuFor, setMenuFor] = useState<string | null>(null);
+  // The row's ⋮ button opens a pop-up menu beside the sidebar rather than
+  // inline: the sidebar is only 240px wide, so an inline row of actions is
+  // clipped by the tree's own scroll box and a long file name pushes the
+  // actions out of view.
+  const [menu, setMenu] = useState<
+    { path: string; createDir: string; renameDir: string; name: string; x: number; y: number } | null
+  >(null);
   // Folders start collapsed when a folder is opened; the toggle
   // remembers the user's expansions.
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   useEffect(() => {
     setExpanded(new Set());
   }, [rootDir]);
+
+  useEffect(() => {
+    if (!menu) return;
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') setMenu(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [menu]);
 
   if (!rootDir) {
     return (
@@ -56,43 +76,18 @@ export default function FileExplorer({
     });
   };
 
-  const menuActions = (path: string, dir: string) => {
-    const name = path.slice(path.lastIndexOf('/') + 1);
-    return (
-      <div className="flex gap-1 text-xs py-1 px-2">
-        <button
-          className="rounded border border-[var(--border)] px-1"
-          onClick={() => {
-            void ask('New file name (in the current folder)', 'new.md').then(n => {
-              if (n) onCreate(dir + '/' + n);
-              setMenuFor(null);
-            });
-          }}
-        >
-          New
-        </button>
-        <button
-          className="rounded border border-[var(--border)] px-1"
-          onClick={() => {
-            void ask('New name', name).then(n => {
-              if (n) onRename(path, dir + '/' + n);
-              setMenuFor(null);
-            });
-          }}
-        >
-          Rename
-        </button>
-        <button
-          className="rounded border border-[var(--border)] px-1"
-          onClick={() => {
-            onDelete(path);
-            setMenuFor(null);
-          }}
-        >
-          Delete
-        </button>
-      </div>
-    );
+  // The menu pops out to the right of the ⋮ button, in the editor's space,
+  // where the whole window width is available.
+  const openMenu = (e: React.MouseEvent<HTMLButtonElement>, path: string, createDir: string, renameDir: string): void => {
+    const r = e.currentTarget.getBoundingClientRect();
+    setMenu({
+      path,
+      createDir,
+      renameDir,
+      name: path.slice(path.lastIndexOf('/') + 1),
+      x: Math.max(4, Math.min(r.right + 6, window.innerWidth - MENU_W - 4)),
+      y: Math.max(4, Math.min(r.top, window.innerHeight - MENU_H - 4))
+    });
   };
 
   const renderNodes = (nodes: FileNode[], depth: number): JSX.Element[] =>
@@ -104,19 +99,18 @@ export default function FileExplorer({
           <div key={n.path} className="flex items-center gap-1">
             <button
               onClick={() => toggle(n.path)}
-              className="flex-1 text-left"
+              className="flex-1 min-w-0 truncate text-left"
               style={{ paddingLeft: depth * 14 }}
             >
               {isExpanded ? '▾' : '▸'} {n.name}/
             </button>
             <button
               title="Folder actions"
-              onClick={() => setMenuFor(menuFor === n.path ? null : n.path)}
+              onClick={(e) => openMenu(e, n.path, n.path, n.path.slice(0, n.path.lastIndexOf('/')))}
               className="px-1"
             >
               ⋮
             </button>
-            {menuFor === n.path && menuActions(n.path, n.path)}
           </div>,
           ...(isExpanded ? renderNodes(n.children ?? [], depth + 1) : [])
         ];
@@ -127,29 +121,82 @@ export default function FileExplorer({
         <div key={n.path} className="flex items-center gap-1">
           <button
             onClick={() => onOpenFile(n.path)}
-            className={`flex-1 text-left ${currentPath === n.path ? 'font-semibold' : ''}`}
+            className={`flex-1 min-w-0 truncate text-left ${currentPath === n.path ? 'font-semibold' : ''}`}
             style={{ paddingLeft: depth * 14 }}
           >
             {n.name}
           </button>
           <button
             title="File actions"
-            onClick={() => setMenuFor(menuFor === n.path ? null : n.path)}
+            onClick={(e) => openMenu(e, n.path, dir, dir)}
             className="px-1"
           >
             ⋮
           </button>
-          {menuFor === n.path && menuActions(n.path, dir)}
         </div>
       ];
     });
 
   return (
-    <div className="flex-1 overflow-auto p-2 text-sm">
-      {renderNodes(tree, 0)}
-      {tree.every(n => !hasMd(n)) && (
-        <div className="opacity-60">No .md files in this folder.</div>
+    <>
+      <div className="flex-1 overflow-auto p-2 text-sm">
+        {renderNodes(tree, 0)}
+        {tree.every(n => !hasMd(n)) && (
+          <div className="opacity-60">No .md files in this folder.</div>
+        )}
+      </div>
+      {menu && (
+        <>
+          {/* Click-away layer: clicking anywhere else closes the pop-up. */}
+          <div className="fixed inset-0 z-40" onMouseDown={() => setMenu(null)} />
+          <div
+            className="fixed z-50 flex flex-col gap-0.5 rounded-md border border-[var(--border)] bg-[var(--bg)] p-1 text-sm shadow-lg"
+            style={{ left: menu.x, top: menu.y }}
+            onMouseDown={(e) => e.stopPropagation()}
+            role="menu"
+            aria-label="File actions"
+          >
+            {(
+              [
+                {
+                  label: 'New',
+                  run: () => {
+                    void ask('New file name (in the current folder)', 'new.md').then((name) => {
+                      if (name) onCreate(`${menu.createDir}/${name}`);
+                      setMenu(null);
+                    });
+                  }
+                },
+                {
+                  label: 'Rename',
+                  run: () => {
+                    void ask('New name', menu.name).then((name) => {
+                      if (name) onRename(menu.path, `${menu.renameDir}/${name}`);
+                      setMenu(null);
+                    });
+                  }
+                },
+                {
+                  label: 'Delete',
+                  run: () => {
+                    onDelete(menu.path);
+                    setMenu(null);
+                  }
+                }
+              ] as Array<{ label: string; run(): void }>
+            ).map((item) => (
+              <button
+                key={item.label}
+                role="menuitem"
+                onClick={item.run}
+                className="rounded px-2 py-1 text-left hover:bg-[var(--menu-hover)]"
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </>
       )}
-    </div>
+    </>
   );
 }
