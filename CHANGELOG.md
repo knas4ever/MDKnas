@@ -2,6 +2,18 @@
 
 Version numbers are the build date: `ÅÅÅÅ.M.D`.
 
+## 2026.10.3
+
+### Fixes
+- **Caret invisible at a line start** — the cursor vanished at the first
+  position of a heading, a list item or a table cell. Those lines start with
+  a zero-width source-coverage span (the stripped `## `, `- `, `1. ` marker
+  or the cell's pipes), and an arrow press from the first visible character
+  parks the caret inside it. The spans kept `line-height: 0` so a leaked one
+  still cannot open a phantom line box, but they no longer collapse to
+  `font-size: 0`: the browser paints the caret as tall as the font at the
+  caret's position, so it now shows at the correct x with the line's height.
+
 ## 2026.10.2
 
 ### Features

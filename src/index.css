@@ -80,10 +80,14 @@
 /* --- Source-offset highlight spans --- */
 .wysiwyg-root span { font: inherit; }
 
-/* Zero-width source-coverage anchors. If one leaks between block-level
-   elements it would form an anonymous line box with a full line height;
-   line-height: 0 keeps it invisible in that case. */
-.wysiwyg-root [data-gap] { line-height: 0; font-size: 0; }
+/* Zero-width source-coverage anchors (stripped markers, pipes, newlines).
+   If one leaks between block-level elements it would form an anonymous
+   line box with a full line height; line-height: 0 keeps it invisible in
+   that case. The font size must stay normal: the browser paints the caret
+   as tall as the font at the caret position, and the caret parks inside
+   these spans at the first position of a heading, list item or table cell
+   — with font-size: 0 it rendered nothing and the cursor disappeared. */
+.wysiwyg-root [data-gap] { line-height: 0; }
 /* Source-only spans (fence markers etc.): in the DOM for cursor mapping
    but never visible or clickable. */
 .wysiwyg-root .src-only, .wysiwyg-root .src-only [data-gap] { display: none; }

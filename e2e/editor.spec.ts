@@ -844,3 +844,56 @@ test('right-click on the header row disables row removal', async () => {
 
   await app.close();
 });
+
+test('the caret stays visible at the first position of a line', async () => {
+  const file = tempDoc('# Hello\n\n- item\n\n| a | b |\n| --- | --- |\n| 1 | 2 |');
+  const app = await electron.launch({ args: ['.', '--open', file] });
+  const win = await app.firstWindow();
+  await win.waitForSelector('.wysiwyg-root');
+  await win.waitForTimeout(600);
+
+  for (const sel of ['h1', 'li', 'th', 'td']) {
+    // The x/y of the first visible character of the line, so the click and
+    // the arrow press are measured against real text.
+    const at = await win.evaluate(async (s: string) => {
+      const el = document.querySelector(s as unknown as string);
+      if (!el) return null;
+      const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      let n: Node | null;
+      let t: Text | null = null;
+      while ((n = w.nextNode()) !== null) {
+        const tt = n as Text;
+        if ((tt.parentElement as Element | null)?.getAttribute('data-gap') === null) { t = tt; break; }
+      }
+      if (!t) return null;
+      const rg = document.createRange();
+      rg.setStart(t, 0);
+      rg.setEnd(t, 1);
+      const r = rg.getBoundingClientRect();
+      return JSON.stringify({ x: r.left, y: r.top + r.height / 2 });
+    }, sel);
+    if (!at) continue;
+    const p = JSON.parse(at);
+    await win.mouse.move(p.x + 1, p.y);
+    await win.mouse.click(p.x + 1, p.y);
+    await win.waitForTimeout(400);
+    // Park the caret left of the first character: the browser moves it into
+    // the coverage gap that anchors the stripped markup.
+    await win.keyboard.press('ArrowLeft');
+    await win.waitForTimeout(300);
+    const height = await win.evaluate(async () => {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return -1;
+      const r = sel.getRangeAt(0);
+      const cr = document.createRange();
+      cr.setStart(r.startContainer, r.startOffset);
+      cr.setEnd(r.startContainer, r.startOffset);
+      return cr.getBoundingClientRect().height;
+    });
+    // A caret inside a collapsed (font-size 0) gap paints nothing; a visible
+    // caret is as tall as the line.
+    expect(height).toBeGreaterThan(10);
+  }
+
+  await app.close();
+});
