@@ -2,6 +2,20 @@
 
 Version numbers are the build date: `ÅÅÅÅ.M.D`.
 
+## 2026.10.5
+
+### Features
+- **Paste images** — pasting an image from the clipboard now copies it into
+  the document's `_assets` folder and inserts a persistent Markdown image
+  reference.
+- **Open folder in File Explorer** — folder rows now offer this action from
+  their ⋮ menu, opening the selected folder in the system file manager.
+
+### Fixes
+- **Windows image paths** — image storage and file operations now recognise
+  Windows backslash paths, so pasted and dragged images are saved alongside
+  the active document instead of disappearing on the next render.
+
 ## 2026.10.3
 
 ### Features

@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import React, { useState } from 'react';
-import { render, fireEvent, cleanup, act } from '@testing-library/react';
+import { render, fireEvent, cleanup, act, waitFor } from '@testing-library/react';
 import WysiwygEditor, { WysiwygEditorHandle } from '../../src/components/WysiwygEditor';
 import { domSelectionToSource, type DomSelectionLike } from '../../src/lib/cursor';
 import type { Selection } from '../../src/lib/editorActions';
@@ -15,11 +15,13 @@ function typeChar(box: HTMLElement, data: string): void {
 function Harness({
   editorRef,
   initial = '',
-  initialSel
+  initialSel,
+  file
 }: {
   editorRef: React.Ref<WysiwygEditorHandle>;
   initial?: string;
   initialSel?: Selection;
+  file?: string;
 }) {
   const [content, setContent] = useState(initial);
   const [selection, setSelection] = useState<Selection>(
@@ -29,7 +31,15 @@ function Harness({
     setContent(c);
     setSelection(s);
   };
-  return <WysiwygEditor ref={editorRef} content={content} selection={selection} onChange={onChange} />;
+  return (
+    <WysiwygEditor
+      ref={editorRef}
+      content={content}
+      selection={selection}
+      onChange={onChange}
+      file={file}
+    />
+  );
 }
 
 describe('WysiwygEditor', () => {
@@ -139,6 +149,38 @@ describe('WysiwygEditor', () => {
     });
     expect(box.innerHTML).toContain('<strong>');
     expect(box.innerHTML).toContain('BC');
+  });
+
+  it('pasting an image saves it and inserts a markdown reference', async () => {
+    const saveImage = vi.fn().mockResolvedValue('doc_assets/pasted-image.png');
+    const w = window as Window & { api: { saveImage: typeof saveImage } };
+    const origApi = w.api;
+    w.api = { ...origApi, saveImage };
+    const ref = React.createRef<WysiwygEditorHandle>();
+    const h = render(<Harness editorRef={ref} file={'C:\\notes\\doc.md'} />);
+    const box = h.getByRole('textbox');
+    const image = {
+      name: '',
+      type: 'image/png',
+      arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(1))
+    } as unknown as File;
+    fireEvent.paste(box, {
+      clipboardData: {
+        files: [image],
+        items: [],
+        getData: () => ''
+      } as unknown as DataTransfer
+    });
+    await waitFor(() => {
+      expect(saveImage).toHaveBeenCalledWith(
+        'C:\\notes',
+        'doc_assets',
+        'pasted-image.png',
+        expect.any(ArrayBuffer)
+      );
+      expect(box.innerHTML).toContain('doc_assets/pasted-image.png');
+    });
+    w.api = origApi;
   });
 
   it('clicking a task-list checkbox toggles the source character', () => {

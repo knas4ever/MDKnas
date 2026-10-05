@@ -1,4 +1,4 @@
-import { app, dialog, ipcMain, BrowserWindow } from 'electron';
+import { app, dialog, ipcMain, BrowserWindow, shell } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import * as files from './fileService';
@@ -30,6 +30,7 @@ export function registerIpc(): void {
   ipcMain.handle('files:delete', (_e, p: string) => {
     files.deleteFile(p);
   });
+  ipcMain.handle('files:openInExplorer', (_e, p: string) => shell.openPath(p));
   ipcMain.handle('files:watch', (_e, dir: string) => {
     files.watchDir(dir, (event, filename) => {
       // ipcMain.emit does not reach the sandboxed renderer reliably;

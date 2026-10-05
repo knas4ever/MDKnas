@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('api', {
   createFile: (p: string, content?: string): Promise<void> => ipcRenderer.invoke('files:create', p, content),
   renameFile: (from: string, to: string): Promise<void> => ipcRenderer.invoke('files:rename', from, to),
   deleteFile: (p: string): Promise<void> => ipcRenderer.invoke('files:delete', p),
+  openInFileExplorer: (p: string): Promise<string> => ipcRenderer.invoke('files:openInExplorer', p),
   saveImage: (docDir: string, assetsName: string, fileName: string, data: ArrayBuffer): Promise<string | null> =>
     ipcRenderer.invoke('files:saveImage', { docDir, assetsName, fileName, data: new Uint8Array(data) }),
   readImageAsDataUrl: (docDir: string, relPath: string): Promise<string | null> =>

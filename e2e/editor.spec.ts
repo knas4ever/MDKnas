@@ -712,6 +712,38 @@ test('drag and drop an image saves it to the assets folder and inserts markdown'
   await app.close();
 });
 
+test('pasting an image saves it to the assets folder and inserts markdown', async () => {
+  const file = tempDoc('# hi\n');
+  const dir = path.dirname(file);
+  const app = await electron.launch({ args: ['.', '--open', file] });
+  const win = await app.firstWindow();
+  await win.waitForSelector('.wysiwyg-root');
+  await win.waitForTimeout(1500);
+
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1MAAA6mAAADqYAAAXcJy6UTwAAAAGUExURQECA////wbwsPYAAAABYktHRAH/Ai3eAAAAB3RJTUUH6gkSFTccEuDywQAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAyNi0wOS0xOFQyMTo1NToyOCswMDowMI7XxpcAAAAldEVYdGRhdGU6bW9kaWZ5ADIwMjYtMDktMThUMjE6NTU6MjgrMDA6MDD/in4rAAAAKHRFWHRkYXRlOnRpbWVzdGFtcAAyMDI2LTA5LTE4VDIxOjU1OjI4KzAwOjAwqJ9f9AAAAApJREFUCNdjYAAAAAIAAeIhvDMAAAAASUVORK5CYII=',
+    'base64'
+  );
+  await win.evaluate((b64: string) => {
+    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    const dt = new DataTransfer();
+    dt.items.add(new File([bytes], 'pasted.png', { type: 'image/png' }));
+    const el = document.querySelector('.wysiwyg-root') as HTMLElement;
+    el.dispatchEvent(
+      new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })
+    );
+  }, png.toString('base64'));
+
+  await expect
+    .poll(() => fs.existsSync(path.join(dir, 'doc_assets', 'pasted.png')), { timeout: 5000 })
+    .toBe(true);
+  await expect
+    .poll(async () => fs.readFileSync(file, 'utf-8'), { timeout: 5000 })
+    .toContain('![pasted.png](doc_assets/pasted.png)');
+
+  await app.close();
+});
+
 test('file changed on disk reloads automatically without re-opening', async () => {
   const file = tempDoc('before');
   const app = await electron.launch({ args: ['.', '--open', file] });

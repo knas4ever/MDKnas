@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { dirname } from './lib/path';
 import WysiwygEditor, { WysiwygEditorHandle } from './components/WysiwygEditor';
 import Toolbar from './components/Toolbar';
 import Sidebar from './components/Sidebar';
@@ -111,7 +112,7 @@ export default function App() {
     setPendingDisk(null);
     // Watch the file's own directory so external edits show up even when
     // no folder was opened (e.g. the app started with a single file).
-    const dir = p.slice(0, p.lastIndexOf('/'));
+    const dir = dirname(p);
     if (dir) await ensureWatched(dir);
   }, [ensureWatched]);
 

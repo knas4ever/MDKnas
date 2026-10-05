@@ -21,6 +21,7 @@ export interface EditorApi {
   createFile(path: string, content?: string): Promise<void>;
   renameFile(from: string, to: string): Promise<void>;
   deleteFile(path: string): Promise<void>;
+  openInFileExplorer(path: string): Promise<string>;
   saveImage(docDir: string, assetsName: string, fileName: string, data: ArrayBuffer): Promise<string | null>;
   readImageAsDataUrl(docDir: string, relPath: string): Promise<string | null>;
   watchDir(dir: string): Promise<() => void>;

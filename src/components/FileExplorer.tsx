@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { FileNode } from '../types';
+import { basename, dirname } from '../lib/path';
 
 interface Props {
   tree: FileNode[];
@@ -22,7 +23,7 @@ function hasMd(node: FileNode): boolean {
 // Rough size of the pop-up menu; it is only used to keep the menu inside
 // the window when the row sits near an edge.
 const MENU_W = 112;
-const MENU_H = 116;
+const MENU_H = 148;
 
 export default function FileExplorer({
   tree,
@@ -39,7 +40,15 @@ export default function FileExplorer({
   // clipped by the tree's own scroll box and a long file name pushes the
   // actions out of view.
   const [menu, setMenu] = useState<
-    { path: string; createDir: string; renameDir: string; name: string; x: number; y: number } | null
+    {
+      path: string;
+      createDir: string;
+      renameDir: string;
+      name: string;
+      isDir: boolean;
+      x: number;
+      y: number;
+    } | null
   >(null);
   // Folders start collapsed when a folder is opened; the toggle
   // remembers the user's expansions.
@@ -78,13 +87,20 @@ export default function FileExplorer({
 
   // The menu pops out to the right of the ⋮ button, in the editor's space,
   // where the whole window width is available.
-  const openMenu = (e: React.MouseEvent<HTMLButtonElement>, path: string, createDir: string, renameDir: string): void => {
+  const openMenu = (
+    e: React.MouseEvent<HTMLButtonElement>,
+    path: string,
+    createDir: string,
+    renameDir: string,
+    isDir: boolean
+  ): void => {
     const r = e.currentTarget.getBoundingClientRect();
     setMenu({
       path,
       createDir,
       renameDir,
-      name: path.slice(path.lastIndexOf('/') + 1),
+      name: basename(path),
+      isDir,
       x: Math.max(4, Math.min(r.right + 6, window.innerWidth - MENU_W - 4)),
       y: Math.max(4, Math.min(r.top, window.innerHeight - MENU_H - 4))
     });
@@ -106,7 +122,7 @@ export default function FileExplorer({
             </button>
             <button
               title="Folder actions"
-              onClick={(e) => openMenu(e, n.path, n.path, n.path.slice(0, n.path.lastIndexOf('/')))}
+              onClick={(e) => openMenu(e, n.path, n.path, dirname(n.path), true)}
               className="px-1"
             >
               ⋮
@@ -116,7 +132,7 @@ export default function FileExplorer({
         ];
       }
       if (!n.name.toLowerCase().endsWith('.md')) return [];
-      const dir = n.path.slice(0, n.path.lastIndexOf('/'));
+      const dir = dirname(n.path);
       return [
         <div key={n.path} className="flex items-center gap-1">
           <button
@@ -128,7 +144,7 @@ export default function FileExplorer({
           </button>
           <button
             title="File actions"
-            onClick={(e) => openMenu(e, n.path, dir, dir)}
+            onClick={(e) => openMenu(e, n.path, dir, dir, false)}
             className="px-1"
           >
             ⋮
@@ -158,6 +174,19 @@ export default function FileExplorer({
           >
             {(
               [
+                ...(menu.isDir
+                  ? [
+                      {
+                        label: 'Open in File Explorer',
+                        run: () => {
+                          void window.api.openInFileExplorer(menu.path).then((error) => {
+                            if (error) window.alert(`Could not open folder:\n${error}`);
+                          });
+                          setMenu(null);
+                        }
+                      }
+                    ]
+                  : []),
                 {
                   label: 'New',
                   run: () => {

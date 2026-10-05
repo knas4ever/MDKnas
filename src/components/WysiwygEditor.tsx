@@ -3,6 +3,7 @@ import mermaid from 'mermaid';
 import { renderMarkdown } from '../lib/markdown';
 import { htmlFragmentToMarkdown } from '../lib/clipboardMd';
 import { domSelectionToSource, sourceToDomSelection } from '../lib/cursor';
+import { basename, dirname } from '../lib/path';
 import {
   applyAction,
   autoPairInsert,
@@ -510,9 +511,9 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
   ref
 ) {
   const caretRef = useRef<HTMLDivElement | null>(null);
-  const docDir = file ? file.slice(0, file.lastIndexOf('/')) : null;
+  const docDir = file ? dirname(file) : null;
   const assetsName = file
-    ? `${file.slice(file.lastIndexOf('/') + 1).replace(/\.[^.]*$/, '')}_assets`
+    ? `${basename(file).replace(/\.[^.]*$/, '')}_assets`
     : null;
   const rootRef = useRef<HTMLDivElement>(null);
   const composing = useRef(false);
@@ -948,24 +949,28 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
     if (hasFiles(e)) e.preventDefault();
   };
 
+  const saveImages = async (images: File[], initialContent: string, initialSelection: Selection): Promise<void> => {
+    if (!docDir || !assetsName) return;
+    let nextContent = initialContent;
+    let nextSelection = initialSelection;
+    for (const image of images) {
+      const data = await image.arrayBuffer();
+      const fallbackName = `pasted-image.${image.type.split('/')[1] || 'png'}`;
+      const name = image.name || fallbackName;
+      const rel = await window.api.saveImage(docDir, assetsName, name, data);
+      if (!rel) continue;
+      const res = insertText(nextContent, nextSelection, `![${name}](${rel})`);
+      nextContent = res.content;
+      nextSelection = res.selection;
+    }
+    apply({ content: nextContent, selection: nextSelection });
+  };
+
   const handleDrop = (e: React.DragEvent<HTMLDivElement>): void => {
     e.preventDefault();
-    if (!docDir || !assetsName) return;
     const dropped = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
     if (dropped.length === 0) return;
-    void (async () => {
-      let c = content;
-      let sel: Selection = selection;
-      for (const f of dropped) {
-        const data = await f.arrayBuffer();
-        const rel = await window.api.saveImage(docDir, assetsName, f.name, data);
-        if (!rel) continue;
-        const res = insertText(c, sel, `![${f.name}](${rel})`);
-        c = res.content;
-        sel = res.selection;
-      }
-      apply({ content: c, selection: sel });
-    })();
+    void saveImages(dropped, content, selection);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -1290,6 +1295,20 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
   };
 
   const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>): void => {
+    const files = Array.from(e.clipboardData.files).filter(file => file.type.startsWith('image/'));
+    const images = files.length > 0
+      ? files
+      : Array.from(e.clipboardData.items)
+        .filter(item => item.kind === 'file' && item.type.startsWith('image/'))
+        .map(item => item.getAsFile())
+        .filter((file): file is File => file !== null);
+    if (images.length > 0) {
+      // Chromium otherwise inserts a transient image into the contenteditable
+      // DOM; the next markdown render removes it because no source exists.
+      e.preventDefault();
+      void saveImages(images, content, effectiveSelection());
+      return;
+    }
     const html = e.clipboardData.getData('text/html');
     const plain = e.clipboardData.getData('text/plain');
     let text = html ? htmlFragmentToMarkdown(html) : plain;
