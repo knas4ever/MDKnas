@@ -16,6 +16,20 @@ experience for common document structures.
 - Syntax highlighting, KaTeX math, Mermaid diagrams, and image resizing
 - Paste or drag images into a document's `_assets` folder
 
+## Screenshots
+
+### WYSIWYG editing
+
+![MDKnas WYSIWYG editor showing headings, task lists, and a table](docs/screenshots/wysiwyg-editor.png)
+
+### Markdown source
+
+![MDKnas raw Markdown source view](docs/screenshots/raw-markdown-source.png)
+
+### Dark mode and inline images
+
+![MDKnas dark theme showing an inline image](docs/screenshots/dark-mode-images.png)
+
 ## Getting started
 
 Prerequisites:
