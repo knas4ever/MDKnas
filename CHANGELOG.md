@@ -2,6 +2,14 @@
 
 Version numbers are the build date: `ÅÅÅÅ.M.D`.
 
+## 2026.10.6
+
+### Features
+
+### Fixes
+- **Code-block copy scrolling** — clicking Copy no longer changes the
+  editor selection or sends the document back to its top.
+
 ## 2026.10.5
 
 ### Features
