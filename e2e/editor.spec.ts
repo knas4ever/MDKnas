@@ -438,6 +438,24 @@ test('code block shows a copy button that copies on click', async () => {
   await app.close();
 });
 
+test('copying code keeps the document scroll position', async () => {
+  const file = tempDoc(`${Array(80).fill('A paragraph').join('\n\n')}\n\n\`\`\`js\nlet x = 1\n\`\`\``);
+  const app = await electron.launch({ args: ['.', '--open', file] });
+  const win = await app.firstWindow();
+  await win.waitForSelector('.wysiwyg-root');
+  const box = win.locator('.wysiwyg-root');
+  const copy = box.locator('.code-copy');
+
+  await copy.scrollIntoViewIfNeeded();
+  const before = await box.evaluate(el => el.scrollTop);
+  await copy.click();
+
+  await expect(copy).toHaveText('Copied');
+  await expect.poll(() => box.evaluate(el => el.scrollTop)).toBeGreaterThan(before - 1);
+
+  await app.close();
+});
+
 test('typing inside a highlighted CRLF code block keeps the caret on the selected line', async () => {
   const file = tempDoc('```bash\r\ncd ~/apps\r\n```');
   const app = await electron.launch({ args: ['.', '--open', file] });

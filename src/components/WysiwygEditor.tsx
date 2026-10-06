@@ -863,6 +863,14 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
     }
   };
 
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>): void => {
+    if ((e.target as HTMLElement).closest('.code-copy')) {
+      // Keep the editor's DOM selection intact. Otherwise the button receives
+      // focus and its element selection maps to source position 0.
+      e.preventDefault();
+    }
+  };
+
   const handleContextMenu = (e: React.MouseEvent<HTMLDivElement>): void => {
     const el = e.target as HTMLElement;
     // An image: offer a resize-by-percentage menu.
@@ -1331,6 +1339,7 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
       spellCheck={false}
       data-typewriter={typewriter}
       onKeyDown={handleKeyDown}
+      onMouseDown={handleMouseDown}
       onClick={handleClick}
       onBeforeInput={handleBeforeInput}
       onCopy={handleCopy}

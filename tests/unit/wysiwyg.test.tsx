@@ -110,6 +110,21 @@ describe('WysiwygEditor', () => {
     expect(setData).toHaveBeenCalledWith('text/plain', '**b**');
   });
 
+  it('preserves the editor selection when pressing a code copy button', async () => {
+    const ref = React.createRef<WysiwygEditorHandle>();
+    const h = render(<Harness editorRef={ref} initial={'```js\nlet x = 1\n```'} />);
+    let copy: HTMLButtonElement | null = null;
+    await waitFor(() => {
+      copy = h.container.querySelector<HTMLButtonElement>('.code-copy');
+      expect(copy).toBeTruthy();
+    });
+
+    const event = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+    copy!.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+  });
+
   it('cut removes the selection and copies raw markdown', () => {
     const ref = React.createRef<WysiwygEditorHandle>();
     const h = render(
