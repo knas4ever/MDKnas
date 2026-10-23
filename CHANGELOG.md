@@ -2,6 +2,16 @@
 
 Version numbers are the build date: `ÅÅÅÅ.M.D`.
 
+## 2026.10.23
+
+### Features
+- **New folders** — create sub-folders from the "+ New folder" button or a
+  folder's ⋮ menu.
+- **Empty folders** are now shown in the file tree, so new documents can be
+  created inside them.
+
+### Fixes
+
 ## 2026.10.6
 
 ### Features

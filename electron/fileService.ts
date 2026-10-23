@@ -51,6 +51,10 @@ export function createFile(p: string, content = ''): void {
   fs.writeFileSync(p, content, 'utf-8');
 }
 
+export function createFolder(p: string): void {
+  fs.mkdirSync(p, { recursive: true });
+}
+
 export function renameFile(from: string, to: string): void {
   fs.renameSync(from, to);
 }

@@ -8,16 +8,16 @@ interface Props {
   currentPath: string | null;
   onOpenFile(path: string): void;
   onCreate(path: string): void;
+  onCreateFolder(path: string): void;
   onRename(from: string, to: string): void;
   onDelete(path: string): void;
   ask(message: string, defaultValue: string): Promise<string | null>;
 }
 
-// Folders are shown when they contain at least one .md file somewhere
-// below them.
+// All folders are shown (also empty ones, so new documents can be created
+// in them); other files are hidden.
 function hasMd(node: FileNode): boolean {
-  if (node.isDir) return (node.children ?? []).some(c => hasMd(c));
-  return node.name.toLowerCase().endsWith('.md');
+  return node.isDir || node.name.toLowerCase().endsWith('.md');
 }
 
 // Rough size of the pop-up menu; it is only used to keep the menu inside
@@ -31,6 +31,7 @@ export default function FileExplorer({
   currentPath,
   onOpenFile,
   onCreate,
+  onCreateFolder,
   onRename,
   onDelete,
   ask
@@ -156,6 +157,16 @@ export default function FileExplorer({
   return (
     <>
       <div className="flex-1 overflow-auto p-2 text-sm">
+        <button
+          className="mb-1 rounded px-1 opacity-80 hover:bg-[var(--menu-hover)]"
+          onClick={() => {
+            void ask('New folder name (in the open folder)', 'new-folder').then((name) => {
+              if (name) onCreateFolder(`${rootDir}/${name}`);
+            });
+          }}
+        >
+          + New folder
+        </button>
         {renderNodes(tree, 0)}
         {tree.every(n => !hasMd(n)) && (
           <div className="opacity-60">No .md files in this folder.</div>
@@ -183,6 +194,16 @@ export default function FileExplorer({
                             if (error) window.alert(`Could not open folder:\n${error}`);
                           });
                           setMenu(null);
+                        }
+                      }
+                      ,
+                      {
+                        label: 'New folder',
+                        run: () => {
+                          void ask('New folder name', 'new-folder').then((name) => {
+                            if (name) onCreateFolder(`${menu.createDir}/${name}`);
+                            setMenu(null);
+                          });
                         }
                       }
                     ]

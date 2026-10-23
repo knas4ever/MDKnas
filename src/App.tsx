@@ -135,6 +135,11 @@ export default function App() {
     if (rootDir) refreshTree(rootDir);
   }, [rootDir, refreshTree]);
 
+  const createFolder = useCallback(async (p: string) => {
+    await window.api.createFolder(p);
+    if (rootDir) refreshTree(rootDir);
+  }, [rootDir, refreshTree]);
+
   const renameFile = useCallback(async (from: string, to: string) => {
     await window.api.renameFile(from, to);
     if (currentPath === from) setCurrentPath(to);
@@ -474,6 +479,7 @@ export default function App() {
           currentPath={currentPath}
           onOpenFile={openFile}
           onCreate={createFile}
+          onCreateFolder={createFolder}
           onRename={renameFile}
           onDelete={deleteFile}
           content={content}

@@ -6,6 +6,7 @@ export interface Api {
   readFile: (p: string) => Promise<string>;
   writeFile: (p: string, content: string) => Promise<void>;
   createFile: (p: string, content?: string) => Promise<void>;
+  createFolder: (p: string) => Promise<void>;
   renameFile: (from: string, to: string) => Promise<void>;
   deleteFile: (p: string) => Promise<void>;
   watchDir: (dir: string) => Promise<() => void>;

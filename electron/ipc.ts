@@ -24,6 +24,9 @@ export function registerIpc(): void {
   ipcMain.handle('files:create', (_e, p: string, content?: string) => {
     files.createFile(p, content ?? '');
   });
+  ipcMain.handle('files:createFolder', (_e, p: string) => {
+    files.createFolder(p);
+  });
   ipcMain.handle('files:rename', (_e, from: string, to: string) => {
     files.renameFile(from, to);
   });

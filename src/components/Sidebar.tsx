@@ -10,6 +10,7 @@ interface Props {
   currentPath: string | null;
   onOpenFile(path: string): void;
   onCreate(path: string): void;
+  onCreateFolder(path: string): void;
   onRename(from: string, to: string): void;
   onDelete(path: string): void;
   content: string;
@@ -25,6 +26,7 @@ export default function Sidebar({
   currentPath,
   onOpenFile,
   onCreate,
+  onCreateFolder,
   onRename,
   onDelete,
   content,
@@ -53,6 +55,7 @@ export default function Sidebar({
           currentPath={currentPath}
           onOpenFile={onOpenFile}
           onCreate={onCreate}
+          onCreateFolder={onCreateFolder}
           onRename={onRename}
           onDelete={onDelete}
           ask={ask}
