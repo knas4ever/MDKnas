@@ -2,6 +2,15 @@
 
 Version numbers are the build date: `ÅÅÅÅ.M.D`.
 
+## 2026.10.26
+
+### Features
+
+### Fixes
+- **Security** — updated Electron 30 → 44 (bundles Node.js 24.22.0) to pick up
+  the October 2026 Node.js security releases (Brotli, TLS hostname checks,
+  DNS, c-ares, OpenSSL, Undici).
+
 ## 2026.10.23
 
 ### Features

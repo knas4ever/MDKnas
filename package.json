@@ -1,8 +1,8 @@
 {
   "name": "mdknas",
   "productName": "MDKnas",
-  "version": "2026.10.23",
-  "description": "MDKnas \u2014 the crispy WYSIWYG markdown editor",
+  "version": "2026.10.26",
+  "description": "MDKnas — the crispy WYSIWYG markdown editor",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "concurrently -k \"vite\" \"npm:dev:electron\"",
@@ -29,7 +29,7 @@
     "autoprefixer": "^10.4.17",
     "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",
-    "electron": "^30.0.0",
+    "electron": "^44.9.3",
     "electron-builder": "^24.13.3",
     "esbuild": "^0.21.5",
     "jsdom": "^24.0.0",
