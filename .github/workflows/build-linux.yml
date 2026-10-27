@@ -20,7 +20,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
-      - run: npm run dist
+      - run: npm run dist -- --publish never
       - uses: actions/upload-artifact@v4
         with:
           name: MDKnas-linux
