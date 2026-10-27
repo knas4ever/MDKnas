@@ -146,6 +146,8 @@ describe('WysiwygEditor', () => {
     typeChar(box, 'a');
     fireEvent.paste(box, {
       clipboardData: {
+        files: [],
+        items: [],
         getData: (t: string) => (t === 'text/plain' ? 'BC' : '')
       } as unknown as DataTransfer
     });
@@ -158,6 +160,8 @@ describe('WysiwygEditor', () => {
     const box = h.getByRole('textbox');
     fireEvent.paste(box, {
       clipboardData: {
+        files: [],
+        items: [],
         getData: (t: string) =>
           t === 'text/html' ? '<strong>BC</strong>' : 'BC'
       } as unknown as DataTransfer
@@ -168,9 +172,10 @@ describe('WysiwygEditor', () => {
 
   it('pasting an image saves it and inserts a markdown reference', async () => {
     const saveImage = vi.fn().mockResolvedValue('doc_assets/pasted-image.png');
+    const readImageAsDataUrl = vi.fn().mockResolvedValue(null);
     const w = window as Window & { api: { saveImage: typeof saveImage } };
     const origApi = w.api;
-    w.api = { ...origApi, saveImage };
+    w.api = { ...origApi, saveImage, readImageAsDataUrl } as typeof w.api;
     const ref = React.createRef<WysiwygEditorHandle>();
     const h = render(<Harness editorRef={ref} file={'C:\\notes\\doc.md'} />);
     const box = h.getByRole('textbox');
