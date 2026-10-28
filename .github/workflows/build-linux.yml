@@ -38,3 +38,24 @@ jobs:
             gh release create "v$VERSION" release/*.AppImage release/*.deb \
               --title "MDKnas $VERSION" --notes-file CHANGELOG.md --target "$GITHUB_SHA"
           fi
+
+  windows:
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run dist:win -- --publish never
+      - name: Zip and attach to release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          ZIP="MDKnas-$VERSION-win-x64.zip"
+          powershell -Command "Compress-Archive -Path release/win-unpacked/* -DestinationPath $ZIP"
+          gh release upload "v$VERSION" "$ZIP" --clobber
