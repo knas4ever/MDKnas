@@ -2,6 +2,13 @@
 
 Version numbers are the build date: `ÅÅÅÅ.M.D`.
 
+## 2026.10.28
+
+### Features
+
+### Fixes
+- **Security** — updated Electron 44.9.3 → 44.10.0 (bundles Node.js 24.22.1).
+
 ## 2026.10.26
 
 ### Features
