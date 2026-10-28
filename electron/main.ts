@@ -2,6 +2,7 @@ import { app, BrowserWindow, Menu, dialog, ipcMain, shell } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import { registerIpc } from './ipc';
+import { checkForUpdates, cleanupOldUpdate } from './updater';
 import type { MenuItem, MenuItemConstructorOptions } from 'electron';
 
 ipcMain.handle('app:openExternal', (_event, url: string) => {
@@ -139,7 +140,10 @@ function buildMenu(win: BrowserWindow): void {
     },
     {
       label: 'Help',
-      submenu: [{ label: 'About', click: () => send('about') }]
+      submenu: [
+        { label: 'Check for Updates…', click: () => void checkForUpdates(win, true) },
+        { label: 'About', click: () => send('about') }
+      ]
     }
   ];
   const menu = Menu.buildFromTemplate(template);
@@ -204,6 +208,10 @@ if (!hasSingleInstanceLock) {
   app.whenReady().then(() => {
     registerIpc();
     createWindow();
+    cleanupOldUpdate();
+    if (!isDev && !process.argv.includes('--smoke')) {
+      setTimeout(() => void checkForUpdates(mainWindow, false), 5000);
+    }
   });
 }
 

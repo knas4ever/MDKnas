@@ -2,6 +2,16 @@
 
 Version numbers are the build date: `ÅÅÅÅ.M.D`.
 
+## 2026.10.29
+
+### Features
+- **Auto-update** — the app checks GitHub Releases on startup (and via
+  Help → Check for Updates…), asks before installing, then downloads the new
+  version and restarts. Works for the Windows zip and the Linux AppImage; a
+  `.deb` install opens the download page instead.
+
+### Fixes
+
 ## 2026.10.28
 
 ### Features
