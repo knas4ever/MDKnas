@@ -11,13 +11,35 @@ import { expectedSha256, isNewer, pickAsset, type ReleaseInfo } from './updateLo
 
 const execFileAsync = promisify(execFile);
 const LATEST_URL = 'https://api.github.com/repos/knas4ever/MDKnas/releases/latest';
-const workDir = (): string => path.join(os.tmpdir(), 'mdknas-update');
+const WORK_PREFIX = 'mdknas-update';
+// A fresh directory per run: a leftover one may be locked (EPERM) by a previous update.
+const workDir = (): string => path.join(os.tmpdir(), `${WORK_PREFIX}-${process.pid}`);
 
 let checking = false;
 
+// Electron's fs treats app.asar as a read-only archive, so removing an extracted
+// update (which contains one) fails with EPERM unless asar support is disabled.
+function removeDir(dir: string): void {
+  const prev = process.noAsar;
+  process.noAsar = true;
+  try {
+    fs.rmSync(dir, { recursive: true, force: true, maxRetries: 3 });
+  } finally {
+    process.noAsar = prev;
+  }
+}
+
 // The backup left by a previous update is only removed once the new version runs.
 export function cleanupOldUpdate(): void {
-  fs.rm(workDir(), { recursive: true, force: true }, () => undefined);
+  const tmp = os.tmpdir();
+  fs.readdir(tmp, (err, names) => {
+    if (err) return;
+    for (const n of names) {
+      if (n === WORK_PREFIX || (n.startsWith(`${WORK_PREFIX}-`) && n !== path.basename(workDir()))) {
+        try { removeDir(path.join(tmp, n)); } catch { /* retried on next start */ }
+      }
+    }
+  });
 }
 
 async function fetchLatest(): Promise<ReleaseInfo> {
@@ -135,7 +157,7 @@ export async function checkForUpdates(win: BrowserWindow | null, manual: boolean
     });
     if (ask.response !== 0) return;
     accepted = true;
-    fs.rmSync(workDir(), { recursive: true, force: true });
+    removeDir(workDir());
     fs.mkdirSync(workDir(), { recursive: true });
     const dest = appImage ? `${appImage}.new` : path.join(workDir(), 'update.zip');
     const actual = await download(asset.browser_download_url, dest, win);

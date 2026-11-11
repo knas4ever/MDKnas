@@ -2,6 +2,15 @@
 
 Version numbers are the build date: `ÅÅÅÅ.M.D`.
 
+## 2026.11.12
+
+### Features
+
+### Fixes
+- **Windows auto-update** — fixed "EPERM, Permission denied" on the temp
+  update folder. Note: updating *from* 2026.11.11 or older may still fail
+  once; delete `%TEMP%\mdknas-update` and retry, or download the zip manually.
+
 ## 2026.11.11
 
 ### Features
