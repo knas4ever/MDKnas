@@ -2,6 +2,17 @@
 
 Version numbers are the build date: `ÅÅÅÅ.M.D`.
 
+## 2026.11.13
+
+### Features
+- Update flow shows a progress indicator while installing and a clear
+  "downloaded – click OK to restart" message.
+
+### Fixes
+- **Windows auto-update** — the install step is now a logged `.cmd` script
+  (no PowerShell script policy needed). If an update does not apply, see
+  `%TEMP%\mdknas-update.log`.
+
 ## 2026.11.12
 
 ### Features

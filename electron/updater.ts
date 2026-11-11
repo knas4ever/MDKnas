@@ -74,7 +74,7 @@ async function installWindows(zipPath: string): Promise<void> {
   const dir = workDir();
   const extracted = path.join(dir, 'new');
   const backup = path.join(dir, 'backup');
-  const script = path.join(dir, 'apply-update.ps1');
+  const script = path.join(dir, 'apply-update.cmd');
   await execFileAsync('powershell.exe', [
     '-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command',
     `Expand-Archive -LiteralPath '${zipPath.replace(/'/g, "''")}' -DestinationPath '${extracted.replace(/'/g, "''")}' -Force`
@@ -83,29 +83,53 @@ async function installWindows(zipPath: string): Promise<void> {
   if (!fs.existsSync(path.join(extracted, path.basename(process.execPath)))) {
     throw new Error('The downloaded update does not contain the application.');
   }
+  const log = path.join(os.tmpdir(), 'mdknas-update.log');
   // robocopy exit codes below 8 mean success; 8 or more triggers the rollback.
+  // A .cmd (not .ps1) avoids PowerShell script-execution policies; progress goes to the log.
   fs.writeFileSync(
     script,
     [
-      'param($ProcId, $Src, $Dst, $Bak, $Exe)',
-      'Wait-Process -Id $ProcId -ErrorAction SilentlyContinue',
-      'Start-Sleep -Seconds 1',
-      'robocopy $Dst $Bak /MIR /R:5 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null',
-      'robocopy $Src $Dst /E /IS /IT /R:30 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null',
-      'if ($LASTEXITCODE -ge 8) { robocopy $Bak $Dst /MIR /R:5 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null }',
-      'Start-Process -FilePath $Exe'
+      '@echo off',
+      'set "PID_=%~1"',
+      'set "SRC=%~2"',
+      'set "DST=%~3"',
+      'set "BAK=%~4"',
+      'set "EXE=%~5"',
+      'set "LOG=%~6"',
+      'echo [%date% %time%] waiting for pid %PID_% > "%LOG%"',
+      'set /a N=0',
+      ':wait',
+      'tasklist /FI "PID eq %PID_%" /NH 2>nul | find "%PID_%" >nul',
+      'if errorlevel 1 goto go',
+      'set /a N+=1',
+      'if %N% GEQ 60 goto go',
+      'ping -n 2 127.0.0.1 >nul',
+      'goto wait',
+      ':go',
+      'ping -n 3 127.0.0.1 >nul',
+      'echo backing up "%DST%" >> "%LOG%"',
+      'robocopy "%DST%" "%BAK%" /MIR /R:5 /W:1 /NP /LOG+:"%LOG%" >nul',
+      'echo copying new files >> "%LOG%"',
+      'robocopy "%SRC%" "%DST%" /E /IS /IT /R:30 /W:1 /NP /LOG+:"%LOG%" >nul',
+      'if errorlevel 8 (',
+      '  echo copy failed, rolling back >> "%LOG%"',
+      '  robocopy "%BAK%" "%DST%" /MIR /R:5 /W:1 /NP /LOG+:"%LOG%" >nul',
+      ') else (',
+      '  echo copy ok >> "%LOG%"',
+      ')',
+      'start "" "%EXE%"',
+      'echo started >> "%LOG%"'
     ].join('\r\n')
   );
-  spawn(
-    'powershell.exe',
-    [
-      '-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', script,
-      String(process.pid), extracted, installDir, backup, process.execPath
-    ],
-    { detached: true, stdio: 'ignore', windowsHide: true }
-  ).unref();
+  const q = (s: string): string => `"${s}"`;
+  const cmdLine = `"${[q(script), q(String(process.pid)), q(extracted), q(installDir), q(backup), q(process.execPath), q(log)].join(' ')}"`;
+  spawn('cmd.exe', ['/d', '/s', '/c', cmdLine], {
+    detached: true,
+    stdio: 'ignore',
+    windowsHide: true,
+    windowsVerbatimArguments: true
+  }).unref();
 }
-
 function installAppImage(downloaded: string, target: string): void {
   fs.chmodSync(downloaded, 0o755);
   // Same-directory rename is atomic; the running AppImage keeps its old inode.
@@ -166,8 +190,20 @@ export async function checkForUpdates(win: BrowserWindow | null, manual: boolean
       fs.rmSync(dest, { force: true });
       throw new Error('The downloaded file failed its integrity check.');
     }
-    if (appImage) installAppImage(dest, appImage);
-    else await installWindows(dest);
+    if (win && !win.isDestroyed()) win.setProgressBar(2, { mode: 'indeterminate' });
+    try {
+      if (appImage) installAppImage(dest, appImage);
+      else await installWindows(dest);
+    } finally {
+      if (win && !win.isDestroyed()) win.setProgressBar(-1);
+    }
+    if (!appImage) {
+      await box({
+        type: 'info',
+        message: `MDKnas ${latest} is downloaded.`,
+        detail: 'Click OK to close the app. It installs the update and restarts by itself (this can take up to a minute).'
+      });
+    }
     app.quit();
   } catch (err) {
     if (manual || accepted) {
