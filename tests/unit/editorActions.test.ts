@@ -225,6 +225,17 @@ describe('indent', () => {
     expect(a.content).toBe('  - a');
     expect(indent(a.content, S(3, 3), true).content).toBe('- a');
   });
+  it('indents a list item under its parent using the parent content offset', () => {
+    expect(indent('1. a\n2. b', S(8, 8), false).content).toBe('1. a\n   1. b');
+    expect(indent('- a\n- b', S(6, 6), false).content).toBe('- a\n  - b');
+  });
+  it('numbers a nested ordered item 1 so it forms a sub-list', () => {
+    expect(indent('1. a\n2. b', S(8, 8), false).content).toBe('1. a\n   1. b');
+    expect(indent('1. a\n   1. b\n2. c', S(16, 16), false).content).toBe('1. a\n   1. b\n   2. c');
+  });
+  it('indents every selected line', () => {
+    expect(indent('- a\n- b\n- c', S(4, 11), false).content).toBe('- a\n  - b\n  - c');
+  });
 });
 
 describe('toggleCodeBlock', () => {
@@ -439,6 +450,35 @@ describe('applyAction', () => {
       'a x b'
     );
   });
+  it('superscript and subscript wrap', () => {
+    expect(applyAction('x2', S(1, 2), 'superscript').content).toBe('x<sup>2</sup>');
+    expect(applyAction('H2O', S(1, 2), 'subscript').content).toBe('H<sub>2</sub>O');
+  });
+  it('h4 and paragraph', () => {
+    expect(applyAction('title', S(0, 0), 'h4').content).toBe('#### title');
+    expect(applyAction('#### title', S(5, 5), 'paragraph').content).toBe('title');
+  });
+  it('hr is separated by blank lines', () => {
+    expect(applyAction('text', S(4, 4), 'hr').content).toBe('text\n\n---\n');
+    expect(applyAction('a\n\nb', S(2, 2), 'hr').content).toBe('a\n\n---\n\nb');
+  });
+  it('image inserts markdown', () => {
+    expect(applyAction('pic', S(0, 3), 'image', 'a.png').content).toBe('![pic](a.png)');
+  });
+  it('clearFormat strips markers', () => {
+    expect(applyAction('## **a** <mark>b</mark>', S(0, 23), 'clearFormat').content).toBe('a b');
+  });
+  it('clearFormat removes list, task and quote markers', () => {
+    expect(applyAction('- item', S(2, 6), 'clearFormat').content).toBe('item');
+    expect(applyAction('- [x] done', S(6, 10), 'clearFormat').content).toBe('done');
+    expect(applyAction('1. a\n2. b', S(3, 8), 'clearFormat').content).toBe('a\nb');
+    expect(applyAction('> q', S(2, 3), 'clearFormat').content).toBe('q');
+    expect(applyAction('- ', S(2, 2), 'clearFormat').content).toBe('');
+  });
+  it('clearFormat strips markers just outside the selection', () => {
+    expect(applyAction('x **bold** y', S(4, 8), 'clearFormat').content).toBe('x bold y');
+    expect(applyAction('<mark>hi</mark>', S(6, 8), 'clearFormat').content).toBe('hi');
+  });
 });
 
 describe('toggleTaskList', () => {
@@ -448,11 +488,14 @@ describe('toggleTaskList', () => {
   it('adds a checkbox to a plain list item', () => {
     expect(toggleTaskList('- item', S(0, 6)).content).toBe('- [ ] item');
   });
-  it('toggles an unchecked task to checked', () => {
-    expect(toggleTaskList('- [ ] task', S(6, 10)).content).toBe('- [x] task');
+  it('removes the checkbox from an unchecked task', () => {
+    expect(toggleTaskList('- [ ] task', S(6, 10)).content).toBe('- task');
   });
-  it('toggles a checked task to unchecked', () => {
-    expect(toggleTaskList('- [x] task', S(6, 10)).content).toBe('- [ ] task');
+  it('removes the checkbox from a checked task', () => {
+    expect(toggleTaskList('- [x] task', S(6, 10)).content).toBe('- task');
+  });
+  it('adds checkboxes to the remaining lines of a mixed selection', () => {
+    expect(toggleTaskList('- [x] a\nb', S(0, 9)).content).toBe('- [x] a\n- [ ] b');
   });
   it('works on ordered list items', () => {
     expect(toggleTaskList('1. item', S(0, 7)).content).toBe('1. [ ] item');

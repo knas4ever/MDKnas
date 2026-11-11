@@ -8,6 +8,25 @@ describe('renderMarkdown', () => {
     expect(html).toContain('<span data-s="2" data-e="7">Hello</span>');
   });
 
+  it('renders an empty nested bullet as a sub-list, not a setext heading', () => {
+    const html = renderMarkdown('- a\n  - ');
+    expect(html).not.toContain('<h2');
+    expect(html.match(/<ul/g)).toHaveLength(2);
+    expect(renderMarkdown('1. a\n   1. ').match(/<ol/g)).toHaveLength(2);
+  });
+
+  it('renders nested ordered items numbered above 1 as sub-lists', () => {
+    const html = renderMarkdown('1. a\n   2. b\n   3. c\n         5. d');
+    expect(html.match(/<ol/g)).toHaveLength(3);
+    expect(html).not.toContain('<br>');
+  });
+
+  it('renders a horizontal rule', () => {
+    const html = renderMarkdown('a\n\n---\n\nb');
+    expect(html).toContain('<hr>');
+    expect(html).toContain('data-s="3" data-e="7"');
+  });
+
   it('renders bold with source offsets', () => {
     const html = renderMarkdown('**bold**');
     expect(html).toContain('<strong><span data-s="2" data-e="6">bold</span></strong>');

@@ -44,13 +44,22 @@ const SHORTCUTS_PLAIN: Record<string, EditorAction> = {
   b: 'bold',
   i: 'italic',
   u: 'underline',
-  '`': 'code'
+  '`': 'code',
+  '0': 'paragraph',
+  '.': 'superscript',
+  ',': 'subscript',
+  '\\': 'clearFormat'
 };
 
 const SHORTCUTS_SHIFT: Record<string, EditorAction> = {
   '1': 'h1',
   '2': 'h2',
   '3': 'h3',
+  '4': 'h4',
+  '5': 'h5',
+  '6': 'h6',
+  d: 'hr',
+  k: 'codeblock',
   l: 'ul',
   '7': 'ol',
   q: 'quote',
@@ -95,7 +104,7 @@ function imageRangeAt(
 // run of emphasis characters, or an HTML inline tag. Leaving styled text
 // must never cost one press per marker character.
 const MARKUP_RUN_CHARS = '*_~`';
-const MARKUP_TAGS = ['<u>', '</u>', '<mark>', '</mark>'];
+const MARKUP_TAGS = ['<u>', '</u>', '<mark>', '</mark>', '<sup>', '</sup>', '<sub>', '</sub>'];
 
 // The source position reached by stepping one arrow key right/left from pos
 // over the markup sitting at the caret (returns pos when there is none).
@@ -1023,7 +1032,7 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
       }
       case 'Tab':
         e.preventDefault();
-        apply(indent(content, selection, !e.shiftKey));
+        apply(indent(content, selection, e.shiftKey));
         return;
       case 'Enter':
         e.preventDefault();

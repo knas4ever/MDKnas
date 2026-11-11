@@ -102,19 +102,32 @@ function buildMenu(win: BrowserWindow): void {
         { label: 'Underline', accelerator: 'CmdOrCtrl+U', click: () => send('fmt:underline') },
         { label: 'Highlight', accelerator: 'CmdOrCtrl+Shift+H', click: () => send('fmt:highlight') },
         { label: 'Inline Code', accelerator: 'CmdOrCtrl+`', click: () => send('fmt:code') },
+        { label: 'Superscript', accelerator: 'CmdOrCtrl+.', click: () => send('fmt:superscript') },
+        { label: 'Subscript', accelerator: 'CmdOrCtrl+,', click: () => send('fmt:subscript') },
+        { label: 'Clear Formatting', accelerator: 'CmdOrCtrl+\\', click: () => send('fmt:clearFormat') },
         { type: 'separator' },
+        { label: 'Paragraph', accelerator: 'CmdOrCtrl+0', click: () => send('fmt:paragraph') },
         { label: 'Heading 1', accelerator: 'CmdOrCtrl+1', click: () => send('fmt:h1') },
         { label: 'Heading 2', accelerator: 'CmdOrCtrl+2', click: () => send('fmt:h2') },
         { label: 'Heading 3', accelerator: 'CmdOrCtrl+3', click: () => send('fmt:h3') },
+        { label: 'Heading 4', accelerator: 'CmdOrCtrl+4', click: () => send('fmt:h4') },
+        { label: 'Heading 5', accelerator: 'CmdOrCtrl+5', click: () => send('fmt:h5') },
+        { label: 'Heading 6', accelerator: 'CmdOrCtrl+6', click: () => send('fmt:h6') },
         { type: 'separator' },
         { label: 'Bullet List', accelerator: 'CmdOrCtrl+Shift+L', click: () => send('fmt:ul') },
         { label: 'Task List', accelerator: 'CmdOrCtrl+Shift+T', click: () => send('fmt:tasklist') },
         { label: 'Numbered List', accelerator: 'CmdOrCtrl+Shift+7', click: () => send('fmt:ol') },
         { label: 'Quote', accelerator: 'CmdOrCtrl+Shift+Q', click: () => send('fmt:quote') },
+        // Tab handling lives in the editor; registerAccelerator: false only
+        // displays the key so it doesn't steal Tab from dialogs.
+        { label: 'Indent (sub-list)', accelerator: 'Tab', registerAccelerator: false, click: () => send('fmt:indent') },
+        { label: 'Outdent', accelerator: 'Shift+Tab', registerAccelerator: false, click: () => send('fmt:outdent') },
         { type: 'separator' },
         { label: 'Link…', accelerator: 'CmdOrCtrl+K', click: () => send('fmt:link') },
-        { label: 'Code Block', click: () => send('fmt:codeblock') },
-        { label: 'Table…', click: () => send('fmt:table') }
+        { label: 'Image…', accelerator: 'CmdOrCtrl+Shift+M', click: () => send('fmt:image') },
+        { label: 'Horizontal Rule', accelerator: 'CmdOrCtrl+Shift+D', click: () => send('fmt:hr') },
+        { label: 'Code Block', accelerator: 'CmdOrCtrl+Shift+K', click: () => send('fmt:codeblock') },
+        { label: 'Table…', accelerator: 'CmdOrCtrl+Shift+G', click: () => send('fmt:table') }
       ]
     },
     {

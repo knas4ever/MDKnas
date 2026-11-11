@@ -11,6 +11,17 @@ export type EditorAction =
   | 'h1'
   | 'h2'
   | 'h3'
+  | 'h4'
+  | 'h5'
+  | 'h6'
+  | 'paragraph'
+  | 'hr'
+  | 'image'
+  | 'superscript'
+  | 'subscript'
+  | 'clearFormat'
+  | 'indent'
+  | 'outdent'
   | 'ul'
   | 'ol'
   | 'quote'
@@ -298,6 +309,14 @@ export function toggleTaskList(
   const first = getLine(content, sel.start);
   const last = lastLineFor(content, sel, first);
   const lines = linesBetween(content, first.start, last.end + 1);
+  const isTask = (t: string): boolean => {
+    const m = LIST_MARKER.exec(t);
+    return !!m && /^\[[ xX]\] /.test(t.slice(m[0].length));
+  };
+  const textLines = lines.filter(l => l.text.trim() !== '' && !/^\u00a0+$/.test(l.text));
+  // When every line is already a task the action removes the checkboxes;
+  // otherwise it turns the remaining lines into tasks.
+  const removing = textLines.length > 0 && textLines.every(l => isTask(l.text));
   const parts = lines.map(l => {
     const t = l.text;
     if (t.trim() === '' || /^\u00a0+$/.test(t)) return t;
@@ -305,10 +324,7 @@ export function toggleTaskList(
     if (m) {
       const after = m[0].length;
       const task = t.slice(after).match(/^\[([ xX])\] /);
-      if (task) {
-        const ch = task[1] === ' ' ? 'x' : ' ';
-        return t.slice(0, after + 1) + ch + t.slice(after + 2);
-      }
+      if (task) return removing ? t.slice(0, after) + t.slice(after + 4) : t;
       return t.slice(0, after) + '[ ] ' + t.slice(after);
     }
     return '- [ ] ' + t;
@@ -342,22 +358,64 @@ export function toggleBlockquote(content: string, sel: Selection): { content: st
   return { content: next, selection: { start: first.start, end: last.end } };
 }
 
+// Indent unit for a list line: the content offset of the list item above it
+// (so "1. a" needs three spaces for a sub-list, "- a" two); 2 otherwise.
+function indentUnit(content: string, line: SourceLine): number {
+  if (!LIST_MARKER.test(line.text) || line.start === 0) return 2;
+  const prev = getLine(content, line.start - 1);
+  const m = LIST_MARKER.exec(prev.text);
+  return m ? Math.max(2, m[0].length - m[1].length) : 2;
+}
+
+// An ordered item that starts a nested list must be numbered 1: CommonMark
+// only lets a list starting at 1 interrupt a paragraph, so "   2. b" under
+// "1. a" would be plain text. Following siblings continue the numbering.
+function renumberNested(text: string, prevText: string): string {
+  const m = /^(\s*)(\d+)([.)])([ \t]+)/.exec(text);
+  if (!m) return text;
+  const prev = /^(\s*)(\d+)([.)])[ \t]+/.exec(prevText) ?? /^(\s*)(?:[-*+])[ \t]+/.exec(prevText);
+  if (!prev) return text;
+  let n: number;
+  if (prev[1].length < m[1].length) n = 1;
+  else if (prev[1].length === m[1].length && prev[2] !== undefined && /\d/.test(prev[2])) n = parseInt(prev[2], 10) + 1;
+  else return text;
+  return m[1] + String(n) + m[3] + m[4] + text.slice(m[0].length);
+}
+
 export function indent(
   content: string,
   sel: Selection,
   outdent: boolean
 ): { content: string; selection: Selection } {
-  const line = getLine(content, sel.start);
-  if (outdent) {
-    const m = line.text.match(/^ {1,4}/);
-    if (!m) return { content, selection: sel };
-    const next = content.slice(0, line.start) + line.text.slice(m[0].length) + content.slice(line.end);
-    const pos = Math.min(Math.max(line.start, sel.start - m[0].length), line.start + line.text.length - m[0].length);
+  const first = getLine(content, sel.start);
+  const last = sel.start === sel.end ? first : lastLineFor(content, sel, first);
+  let out = '';
+  let delta = 0;
+  let firstDelta = 0;
+  let prevText = first.start > 0 ? getLine(content, first.start - 1).text : '';
+  for (const line of linesBetween(content, first.start, last.end + 1)) {
+    const unit = indentUnit(content, line);
+    let text: string;
+    if (outdent) {
+      const m = line.text.match(new RegExp(`^ {1,${unit}}`));
+      text = m ? line.text.slice(m[0].length) : line.text;
+    } else {
+      text = renumberNested(' '.repeat(unit) + line.text, prevText);
+    }
+    prevText = text;
+    if (line.start === first.start) firstDelta = text.length - line.text.length;
+    delta += text.length - line.text.length;
+    out += text + (line.end < last.end ? '\n' : '');
+  }
+  const next = content.slice(0, first.start) + out + content.slice(last.end);
+  if (sel.start === sel.end) {
+    const pos = Math.max(first.start, sel.start + firstDelta);
     return { content: next, selection: { start: pos, end: pos } };
   }
-  const next = content.slice(0, line.start) + '  ' + line.text + content.slice(line.end);
-  const pos = sel.start + 2;
-  return { content: next, selection: { start: pos, end: pos } };
+  return {
+    content: next,
+    selection: { start: Math.max(first.start, sel.start + firstDelta), end: sel.end + delta }
+  };
 }
 
 const ROW_LINE = /^\s*\|/;
@@ -561,6 +619,100 @@ export function applyLink(
   return { content: next, selection: { start: textStart, end: textStart + text.length } };
 }
 
+export function clearHeading(content: string, sel: Selection): { content: string; selection: Selection } {
+  const line = getLine(content, sel.start);
+  const m = line.text.match(/^#{1,6}\s*/);
+  if (!m) return { content, selection: sel };
+  const next = content.slice(0, line.start) + line.text.slice(m[0].length) + content.slice(line.end);
+  const pos = Math.max(line.start, sel.start - m[0].length);
+  return { content: next, selection: { start: pos, end: pos } };
+}
+
+// Blank lines around the rule keep a preceding text line from turning into
+// a setext heading.
+export function insertHorizontalRule(content: string, sel: Selection): { content: string; selection: Selection } {
+  const line = getLine(content, sel.start);
+  const blank = line.text.trim() === '';
+  const prevBlank = line.start === 0 || getLine(content, line.start - 1).text.trim() === '';
+  const lead = blank ? (prevBlank ? '' : '\n') : '\n\n';
+  const insert = `${lead}---\n`;
+  const at = blank ? line.start : line.end;
+  const tail = blank ? line.end : at;
+  const next = content.slice(0, at) + insert + content.slice(tail);
+  const pos = at + insert.length;
+  return { content: next, selection: { start: pos, end: pos } };
+}
+
+export function insertImage(
+  content: string,
+  sel: Selection,
+  url?: string
+): { content: string; selection: Selection } {
+  const alt = sel.end > sel.start ? content.slice(sel.start, sel.end) : 'image';
+  const img = `![${alt}](${url ?? 'url'})`;
+  const next = content.slice(0, sel.start) + img + content.slice(sel.end);
+  return { content: next, selection: { start: sel.start + 2, end: sel.start + 2 + alt.length } };
+}
+
+const BLOCK_PREFIX = /^\s*(?:>[ \t]?)*(?:(?:[-*+]|\d+[.)])[ \t]+(?:\[[ xX]\][ \t]+)?)?(?:#{1,6}[ \t]+)?/;
+
+// Clears inline styling (bold, italic, strikethrough, code, underline,
+// highlight, sup/sub) and the block prefix (heading, quote, list or task
+// marker) of every line the selection touches. Inline markers that sit just
+// outside the selection (selecting bold text selects only its inner text)
+// are included, so the whole styled run is cleared.
+export function clearFormatting(content: string, sel: Selection): { content: string; selection: Selection } {
+  const tags = ['<u>', '</u>', '<mark>', '</mark>', '<sup>', '</sup>', '<sub>', '</sub>'];
+  let start = sel.start;
+  let end = sel.end;
+  if (start !== end) {
+    for (let moved = true; moved; ) {
+      moved = false;
+      while (start > 0 && '*_~`'.includes(content[start - 1])) { start -= 1; moved = true; }
+      while (end < content.length && '*_~`'.includes(content[end])) { end += 1; moved = true; }
+      for (const t of tags) {
+        if (content.endsWith(t, start)) { start -= t.length; moved = true; }
+        if (content.startsWith(t, end)) { end += t.length; moved = true; }
+      }
+    }
+  }
+  const first = getLine(content, start);
+  const last = start === end ? first : lastLineFor(content, { start, end }, first);
+  const blockStart = first.start;
+  const blockEnd = last.end;
+  const inlineClean = (s: string): string =>
+    s
+      .replace(/<\/?(?:u|mark|sup|sub)>/g, '')
+      .replace(/(\*\*|__|~~|\*|`)/g, '');
+  let out = '';
+  let newStart = start;
+  let newEnd = -1;
+  let pos = blockStart;
+  for (const line of linesBetween(content, blockStart, blockEnd + 1)) {
+    const prefix = BLOCK_PREFIX.exec(line.text)![0].length;
+    const bodyStart = line.start + prefix;
+    // Only the part inside the selection loses inline markers.
+    const selFrom = Math.max(bodyStart, start);
+    const selTo = Math.max(selFrom, Math.min(line.end, end));
+    const body =
+      content.slice(bodyStart, selFrom) +
+      (start !== end ? inlineClean(content.slice(selFrom, selTo)) : content.slice(selFrom, selTo)) +
+      content.slice(selTo, line.end);
+    if (start >= line.start && start <= line.end) newStart = out.length + blockStart + Math.max(0, selFrom - bodyStart);
+    if (end >= line.start && end <= line.end) {
+      newEnd =
+        out.length + blockStart + content.slice(bodyStart, selFrom).length +
+        (start !== end ? inlineClean(content.slice(selFrom, selTo)).length : selTo - selFrom);
+    }
+    out += body;
+    pos = line.end;
+    if (pos < blockEnd) out += '\n';
+  }
+  const next = content.slice(0, blockStart) + out + content.slice(blockEnd);
+  if (newEnd < 0) newEnd = blockStart + out.length;
+  return { content: next, selection: { start: newStart, end: Math.max(newStart, newEnd) } };
+}
+
 export function applyAction(
   content: string,
   sel: Selection,
@@ -584,6 +736,28 @@ export function applyAction(
       return toggleHeading(content, sel, 2);
     case 'h3':
       return toggleHeading(content, sel, 3);
+    case 'h4':
+      return toggleHeading(content, sel, 4);
+    case 'h5':
+      return toggleHeading(content, sel, 5);
+    case 'h6':
+      return toggleHeading(content, sel, 6);
+    case 'paragraph':
+      return clearHeading(content, sel);
+    case 'hr':
+      return insertHorizontalRule(content, sel);
+    case 'image':
+      return insertImage(content, sel, arg);
+    case 'superscript':
+      return wrapSelection(content, sel, '<sup>', '</sup>');
+    case 'subscript':
+      return wrapSelection(content, sel, '<sub>', '</sub>');
+    case 'clearFormat':
+      return clearFormatting(content, sel);
+    case 'indent':
+      return indent(content, sel, false);
+    case 'outdent':
+      return indent(content, sel, true);
     case 'ul':
       return toggleList(content, sel, false);
     case 'ol':

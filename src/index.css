@@ -212,17 +212,24 @@
 :root[data-theme='dark'] .wysiwyg-root code { background: var(--code-bg); border-color: #525c6c; }
 
 /* Inline mark / highlight (Typora-style) */
-.wysiwyg-root mark { background: #ffe9a1; color: #1d1b12; }
-:root[data-theme='dark'] .wysiwyg-root mark { background: #6d5a10; color: #f7f3e2; }
+.wysiwyg-root mark { background: #ffeb3b; color: #1d1b12; }
+:root[data-theme='dark'] .wysiwyg-root mark { background: #ffeb3b; color: #1d1b12; }
+.toolbar button[data-action='highlight'] { background: #ffeb3b; color: #1d1b12; }
+:root[data-theme='dark'] .toolbar button[data-action='highlight'] { color: #1d1b12; }
 
 /* GFM task lists: checkbox toggling the "[ ]" / "[x]" source character;
-   the list bullet is replaced by the checkbox itself. */
+   the list bullet is replaced by the checkbox itself. The checkbox hangs in
+   the list's left padding where the bullet would be, so task items line up
+   with normal list items at every nesting level. */
 .wysiwyg-root li.task-item { list-style: none; }
-.wysiwyg-root .task { cursor: pointer; }
+.wysiwyg-root .task {
+  cursor: pointer;
+  display: inline-block;
+  width: 0;
+  position: relative;
+  left: calc(-13px - 0.35em);
+}
 .wysiwyg-root .task input[type='checkbox'] { margin: 0 0.35em 0 0; }
-/* Continuation lines of a task item align with the item text (indented
-   past the checkbox that replaced the bullet). */
-.wysiwyg-root .li-cont { padding-left: calc(13px + 0.35em); }
 :root[data-theme='dark'] .wysiwyg-root pre { background: var(--pre-bg); border-color: var(--border); }
 :root[data-theme='dark'] .wysiwyg-root th { background: var(--code-bg); }
 :root[data-theme='dark'] .wysiwyg-root th,

@@ -370,6 +370,28 @@ export default function App() {
     });
   }, [ask, content, selection, sourceMode]);
 
+  // The image button always copies the picked file into the document's
+  // <name>_assets/ folder and links it relatively.
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const handleImage = useCallback(() => {
+    if (!currentPath) {
+      window.alert('Save the document first: images are stored in its <name>_assets folder.');
+      return;
+    }
+    imageInputRef.current?.click();
+  }, [currentPath]);
+
+  const onImagePicked = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f || !currentPath) return;
+    const assetsName = `${currentPath.replace(/^.*[\\/]/, '').replace(/\.[^.]*$/, '')}_assets`;
+    const rel = await window.api.saveImage(dirname(currentPath), assetsName, f.name, await f.arrayBuffer());
+    if (!rel) return;
+    if (sourceMode) applySourceAction('image', rel);
+    else editorRef.current?.execute('image', rel);
+  }, [currentPath, sourceMode, applySourceAction, editorRef]);
+
   const handleTable = useCallback(() => {
     void askTable().then(size => {
       if (!size) return;
@@ -446,6 +468,7 @@ export default function App() {
       else if (a.startsWith('fmt:')) {
         const action = a.slice(4) as EditorAction;
         if (action === 'link') handleLink();
+        else if (action === 'image') handleImage();
         else if (action === 'table') handleTable();
         else if (sourceMode) {
           applySourceAction(action);
@@ -454,7 +477,7 @@ export default function App() {
         }
       }
     });
-  }, [handleNew, handleSave, handleSaveAs, openFolder, handleLink, handleTable, doUndo, doRedo, content, selection, sourceMode, editorRef]);
+  }, [handleNew, handleSave, handleSaveAs, openFolder, handleLink, handleImage, handleTable, doUndo, doRedo, content, selection, sourceMode, editorRef]);
 
   const onChange = useCallback((c: string, s: Selection) => {
     if (c !== content) {
@@ -495,10 +518,22 @@ export default function App() {
           ask={ask}
         />
         <div className="flex flex-1 flex-col">
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/*"
+            hidden
+            aria-label="Choose image"
+            onChange={e => void onImagePicked(e)}
+          />
           <Toolbar
             onAction={a => {
               if (a === 'link') {
                 handleLink();
+                return;
+              }
+              if (a === 'image') {
+                handleImage();
                 return;
               }
               if (a === 'table') {

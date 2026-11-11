@@ -2,6 +2,24 @@
 
 Version numbers are the build date: `ÅÅÅÅ.M.D`.
 
+## 2026.11.11
+
+### Features
+- **More formatting tools** — yellow highlight button, headings 4–6,
+  paragraph, superscript, subscript, clear formatting, image (copied to the
+  document's assets folder), horizontal rule, code block and table shortcuts;
+  all in the toolbar and Format menu.
+- **Indent / Outdent** — Tab / Shift+Tab (also in the Format menu) to make
+  sub-lists for bullet, numbered and task lists.
+
+### Fixes
+- Horizontal rules are now rendered.
+- Task lists can be removed again; nested task lists indent like normal lists.
+- Clear formatting also removes surrounding markers, headings, quotes and lists.
+- Empty nested bullets and nested numbered lists no longer render as headings
+  or plain text.
+- Strikethrough toolbar button no longer looks like underline.
+
 ## 2026.10.29
 
 ### Features

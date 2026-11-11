@@ -35,6 +35,42 @@ function renderSource(content: string): string {
     .join('\n');
 }
 
+// An empty nested list marker ("  - ") directly under a text line is not a
+// list item to CommonMark: it cannot interrupt a paragraph, so "- a\n  -"
+// parses as a setext heading and "1. a\n   1." as plain text. A blank line
+// is inserted before such markers for parsing only; token line maps are
+// translated back so source offsets stay exact.
+function parseSource(content: string): Token[] {
+  const lines = renderSource(content).split('\n');
+  const expanded: string[] = [];
+  const insertedAt: number[] = [];
+  lines.forEach((line, i) => {
+    if (i > 0 && /^[ \t]+(?:[-*+]|\d+[.)])[ \t]*$/.test(line) && lines[i - 1].trim() !== '') {
+      insertedAt.push(expanded.length);
+      expanded.push('');
+    }
+    // A nested ordered item not numbered 1 cannot start a sub-list, so it
+    // would render as plain text. Parse its number as 0..01 (same length,
+    // so offsets are unchanged); the rendered list numbers items itself.
+    const o = i > 0 ? /^([ \t]+)(\d+)([.)][ \t].*)$/.exec(line) : null;
+    if (o && parseInt(o[2], 10) !== 1) {
+      const prev = lines[i - 1];
+      const p = /^([ \t]*)\d+[.)][ \t]/.exec(prev);
+      if (prev.trim() !== '' && !(p && p[1].length >= o[1].length)) {
+        line = o[1] + '0'.repeat(o[2].length - 1) + '1' + o[3];
+      }
+    }
+    expanded.push(line);
+  });
+  const tokens = md.parse(expanded.join('\n'), {});
+  if (insertedAt.length === 0) return tokens;
+  const back = (e: number): number => e - insertedAt.filter(x => x < e).length;
+  for (const t of tokens) {
+    if (t.map) t.map = [back(t.map[0]), back(t.map[1])];
+  }
+  return tokens;
+}
+
 export function lineStarts(content: string): number[] {
   const starts = [0];
   for (let i = 0; i < content.length; i++) {
@@ -412,7 +448,7 @@ export function renderMarkdown(
   baseDir?: string,
   resolveImg?: (abs: string) => string | null
 ): string {
-  const tokens = md.parse(renderSource(content), {});
+  const tokens = parseSource(content);
   const starts = lineStarts(content);
   let bi = 0;
   let html = '';
@@ -766,6 +802,14 @@ export function renderMarkdown(
         }
         break;
       }
+      case 'hr': {
+        const [ls, le] = t.map!;
+        emitCovered(starts[ls]);
+        const end = lineEnd(le);
+        html += `<div data-bi="${nextBi()}" data-hr>${gapSpan(starts[ls], end)}<hr></div>`;
+        covered = end;
+        break;
+      }
       case 'html_block': {
         const ls = t.map![0];
         emitCovered(starts[ls]);
@@ -793,7 +837,7 @@ export interface Heading {
 }
 
 export function extractHeadings(content: string): Heading[] {
-  const tokens = md.parse(renderSource(content), {});
+  const tokens = parseSource(content);
   const starts = lineStarts(content);
   const out: Heading[] = [];
   for (let i = 0; i < tokens.length; i++) {
