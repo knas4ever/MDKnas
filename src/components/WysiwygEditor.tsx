@@ -580,6 +580,37 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
     };
   }, []);
 
+  // Spell-check suggestion: replace the misspelled word in the source,
+  // otherwise the next render restores the original text. Needs a native
+  // listener: React's onBeforeInput never sees insertReplacementText.
+  const contentRef = useRef(content);
+  contentRef.current = content;
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const onNativeBeforeInput = (ev: InputEvent): void => {
+      if (ev.inputType !== 'insertReplacementText') return;
+      const text = ev.data ?? ev.dataTransfer?.getData('text/plain') ?? '';
+      const range = ev.getTargetRanges()[0];
+      if (!text || !range || !root.contains(range.startContainer) || !root.contains(range.endContainer)) return;
+      ev.preventDefault();
+      const r = domSelectionToSource(root, {
+        anchorNode: range.startContainer,
+        anchorOffset: range.startOffset,
+        focusNode: range.endContainer,
+        focusOffset: range.endOffset
+      });
+      const src = contentRef.current;
+      const pos = r.start + text.length;
+      applyRef.current({
+        content: src.slice(0, r.start) + text + src.slice(r.end),
+        selection: { start: pos, end: pos }
+      });
+    };
+    root.addEventListener('beforeinput', onNativeBeforeInput);
+    return () => root.removeEventListener('beforeinput', onNativeBeforeInput);
+  }, []);
+
   const apply = useCallback(
     (next: { content: string; selection: Selection }) => {
       pendingRender.current = true;
@@ -587,6 +618,8 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
     },
     [onChange]
   );
+  const applyRef = useRef(apply);
+  applyRef.current = apply;
 
   const effectiveSelection = useCallback((): Selection => {
     const root = rootRef.current;
