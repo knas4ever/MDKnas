@@ -100,6 +100,11 @@ describe('wrapSelection', () => {
     expect(r.content).toBe('hello');
     expect(r.selection).toEqual(S(1, 4));
   });
+  it('keeps surrounding blanks outside the markers (double-click selection)', () => {
+    const r = wrapSelection('a word b', S(2, 7), '**', '**');
+    expect(r.content).toBe('a **word** b');
+    expect(r.selection).toEqual(S(4, 8));
+  });
   it('wraps plain selection with strikethrough', () => {
     expect(wrapSelection('hello', S(1, 4), '~~', '~~').content).toBe('h~~ell~~o');
   });

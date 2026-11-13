@@ -166,6 +166,14 @@ export function wrapSelection(
   prefix: string,
   suffix: string
 ): { content: string; selection: Selection } {
+  // A double-click on Windows also selects the space after the word; markers
+  // around trailing/leading blanks would not format anything in CommonMark.
+  const picked = content.slice(sel.start, sel.end);
+  if (/\S/.test(picked)) {
+    const lead = picked.length - picked.replace(/^[ \t]+/, '').length;
+    const trail = picked.length - picked.replace(/[ \t]+$/, '').length;
+    sel = { start: sel.start + lead, end: sel.end - trail };
+  }
   // Only undo when the selection is wrapped by exactly one copy of this
   // marker. A longer run must nest instead of having one character stripped:
   // Italic on a bold word adds the italic pair inside the bold, and an empty
