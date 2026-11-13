@@ -2,6 +2,16 @@
 
 Version numbers are the build date: `ÅÅÅÅ.M.D`.
 
+## 2026.11.15
+
+### Features
+
+### Fixes
+- **Windows auto-update** — the update script no longer hangs while waiting
+  for the app to close, so the update installs and the app restarts. Note:
+  updating *from* 2026.11.14 or older may still fail once; install this
+  version manually.
+
 ## 2026.11.14
 
 ### Features
