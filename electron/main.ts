@@ -189,6 +189,23 @@ function createWindow(): void {
     if (mainWindow === win) mainWindow = null;
   });
   buildMenu(win);
+  win.webContents.on('context-menu', (_event, params) => {
+    if (!params.isEditable) return;
+    const items: MenuItemConstructorOptions[] = [];
+    if (params.misspelledWord) {
+      for (const s of params.dictionarySuggestions.slice(0, 5)) {
+        items.push({ label: s, click: () => win.webContents.replaceMisspelling(s) });
+      }
+      if (items.length === 0) items.push({ label: 'No suggestions', enabled: false });
+      items.push({
+        label: 'Add to dictionary',
+        click: () => win.webContents.session.addWordToSpellCheckerDictionary(params.misspelledWord)
+      });
+      items.push({ type: 'separator' });
+    }
+    items.push({ role: 'cut' }, { role: 'copy' }, { role: 'paste' });
+    Menu.buildFromTemplate(items).popup({ window: win });
+  });
   if (isDev) {
     win.loadURL('http://127.0.0.1:5173');
   } else {

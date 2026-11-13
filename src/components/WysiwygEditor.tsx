@@ -661,6 +661,9 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
     if (last === null || last.content !== content || last.imgVersion !== imgVersion) {
       renderedRef.current = { content, imgVersion };
       root.innerHTML = renderMarkdown(content, docDir ?? undefined, (abs) => imgCache.current.get(abs) ?? null);
+      root.querySelectorAll<HTMLElement>('code, pre, .math, .src-only').forEach((el) => {
+        el.spellcheck = false;
+      });
       // Local images are read by the main process (the renderer cannot load
       // file:// sub-resources); fetch uncached ones and re-render.
       if (docDir) {
@@ -1347,7 +1350,7 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
       aria-label="Markdown editor"
       contentEditable
       suppressContentEditableWarning
-      spellCheck={false}
+      spellCheck
       data-typewriter={typewriter}
       onKeyDown={handleKeyDown}
       onMouseDown={handleMouseDown}
