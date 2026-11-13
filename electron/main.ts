@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, dialog, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, Menu, dialog, ipcMain, session, shell } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import { registerIpc } from './ipc';
@@ -42,6 +42,50 @@ function openFileInWindow(filePath: string): void {
   win.focus();
   win.webContents.send('app:open-file', filePath);
   pendingOpenPath = null;
+}
+
+const SPELL_LANGUAGE_NAMES: Record<string, string> = {
+  'en-US': 'English (US)',
+  'en-GB': 'English (UK)',
+  da: 'Dansk',
+  de: 'Deutsch',
+  sv: 'Svenska',
+  nb: 'Norsk (bokmål)',
+  fr: 'Français',
+  es: 'Español',
+  nl: 'Nederlands'
+};
+
+function spellingLanguages(): string[] {
+  const available = new Set(session.defaultSession.availableSpellCheckerLanguages);
+  return Object.keys(SPELL_LANGUAGE_NAMES).filter((c) => available.has(c));
+}
+
+const spellFile = (): string => path.join(app.getPath('userData'), 'spellcheck.json');
+
+function restoreSpellLanguages(): void {
+  try {
+    const langs = JSON.parse(fs.readFileSync(spellFile(), 'utf-8')) as unknown;
+    if (Array.isArray(langs) && langs.every((l) => typeof l === 'string')) {
+      session.defaultSession.setSpellCheckerLanguages(langs as string[]);
+    }
+  } catch {
+    // no saved choice: keep the system-language default
+  }
+}
+
+function toggleSpellLanguage(win: BrowserWindow, code: string, on: boolean): void {
+  const s = win.webContents.session;
+  const set = new Set(s.getSpellCheckerLanguages());
+  if (on) set.add(code);
+  else set.delete(code);
+  const langs = [...set];
+  s.setSpellCheckerLanguages(langs);
+  try {
+    fs.writeFileSync(spellFile(), JSON.stringify(langs));
+  } catch {
+    // choice just won't persist
+  }
 }
 
 function findMenuItem(items: MenuItem[], label: string): MenuItem | null {
@@ -152,6 +196,15 @@ function buildMenu(win: BrowserWindow): void {
       submenu: [{ role: 'minimize' }, { role: 'close' }]
     },
     {
+      label: 'Spelling',
+      submenu: spellingLanguages().map((code) => ({
+        label: SPELL_LANGUAGE_NAMES[code] ?? code,
+        type: 'checkbox' as const,
+        checked: win.webContents.session.getSpellCheckerLanguages().includes(code),
+        click: (item: MenuItem) => toggleSpellLanguage(win, code, item.checked)
+      }))
+    },
+    {
       label: 'Help',
       submenu: [
         { label: 'Check for Updates…', click: () => void checkForUpdates(win, true) },
@@ -227,6 +280,10 @@ function createWindow(): void {
 
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 
+// Drops the GPU process (~100 MB); the editor is plain DOM and needs no GPU.
+app.disableHardwareAcceleration();
+app.commandLine.appendSwitch('in-process-gpu');
+
 if (!hasSingleInstanceLock) {
   app.quit();
 } else {
@@ -236,6 +293,7 @@ if (!hasSingleInstanceLock) {
   });
 
   app.whenReady().then(() => {
+    restoreSpellLanguages();
     registerIpc();
     createWindow();
     cleanupOldUpdate();
