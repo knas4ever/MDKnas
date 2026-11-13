@@ -1,7 +1,31 @@
 import MarkdownIt from 'markdown-it';
 import type { Token } from 'markdown-it';
-import hljs from 'highlight.js';
-import katex from 'katex';
+import hljs from 'highlight.js/lib/common';
+
+type Katex = typeof import('katex').default;
+let katexLib: Katex | null = null;
+let katexLoading = false;
+const katexListeners = new Set<() => void>();
+
+// KaTeX is loaded on first use so it stays out of the startup bundle. Until it
+// arrives math renders as escaped source; listeners are told to re-render.
+export function onKatexReady(cb: () => void): () => void {
+  katexListeners.add(cb);
+  return () => katexListeners.delete(cb);
+}
+
+function loadKatex(): void {
+  if (katexLoading) return;
+  katexLoading = true;
+  void import('katex')
+    .then((m) => {
+      katexLib = m.default;
+      katexListeners.forEach((cb) => cb());
+    })
+    .catch(() => {
+      katexLoading = false;
+    });
+}
 
 const md = new MarkdownIt({ html: true, typographer: false, breaks: false });
 
@@ -97,7 +121,10 @@ function gapSpan(s: number, e: number, prefix = false): string {
 // Visible anchor for lines that would otherwise be empty (an empty list
 // item's marker, a trailing empty line): one &nbsp; per source character so
 function mathSpan(latex: string, s: number, e: number): string {
-  const html = katex.renderToString(latex, { displayMode: true, throwOnError: false });
+  if (!katexLib) loadKatex();
+  const html = katexLib
+    ? katexLib.renderToString(latex, { displayMode: true, throwOnError: false })
+    : escapeHtml(latex);
   return `<span class="math" data-s="${s}" data-e="${e}">${html}</span>`;
 }
 

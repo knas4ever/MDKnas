@@ -1,6 +1,5 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import mermaid from 'mermaid';
-import { renderMarkdown } from '../lib/markdown';
+import { renderMarkdown, onKatexReady } from '../lib/markdown';
 import { htmlFragmentToMarkdown } from '../lib/clipboardMd';
 import { domSelectionToSource, sourceToDomSelection } from '../lib/cursor';
 import { basename, dirname } from '../lib/path';
@@ -540,6 +539,7 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
   // imgVersion re-renders once new entries arrive.
   const imgCache = useRef(new Map<string, string>());
   const [imgVersion, setImgVersion] = useState(0);
+  useEffect(() => onKatexReady(() => setImgVersion((v) => v + 1)), []);
   const retryTick = useRef<(() => void) | null>(null);
   const processSelectionRef = useRef<() => void>(() => {});
   const verticalColumnRef = useRef<number | null>(null);
@@ -680,7 +680,9 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
         });
       }
       try {
-        void mermaid.run({ querySelector: '.mermaid' });
+        if (root.querySelector('.mermaid')) {
+          void import('mermaid').then((m) => m.default.run({ querySelector: '.mermaid' })).catch(() => {});
+        }
       } catch {
         // mermaid render failure: raw text stays visible in the block
       }
