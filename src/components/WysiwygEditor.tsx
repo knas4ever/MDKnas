@@ -597,7 +597,8 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
       root.contentEditable = 'true';
     }, 150);
     return () => clearTimeout(t);
-  }, []);
+    // Also when another file is opened.
+  }, [file]);
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
