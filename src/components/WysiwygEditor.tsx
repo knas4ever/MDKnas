@@ -586,6 +586,19 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
   const contentRef = useRef(content);
   contentRef.current = content;
   useEffect(() => {
+    // A remounted editor (after Raw ↔ Rich) is not spell-checked until
+    // Chromium re-registers it as an editable root.
+    const root = rootRef.current;
+    if (!root) return;
+    // After the first render has painted the content.
+    const t = setTimeout(() => {
+      root.contentEditable = 'false';
+      void root.offsetHeight;
+      root.contentEditable = 'true';
+    }, 150);
+    return () => clearTimeout(t);
+  }, []);
+  useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
     const onNativeBeforeInput = (ev: InputEvent): void => {
