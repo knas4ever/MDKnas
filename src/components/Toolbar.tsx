@@ -53,7 +53,14 @@ export default function Toolbar({
   return (
     <div className="toolbar" role="toolbar">
       {ACTIONS.map(a => (
-        <button key={a.action} data-action={a.action} title={a.title} onClick={() => onAction(a.action)}>
+        <button
+          key={a.action}
+          data-action={a.action}
+          title={a.title}
+          // Keep focus in the editor: refocusing it afterwards leaves it unchecked by the spell checker.
+          onMouseDown={e => e.preventDefault()}
+          onClick={() => onAction(a.action)}
+        >
           {a.label}
         </button>
       ))}

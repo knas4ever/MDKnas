@@ -212,9 +212,9 @@
 :root[data-theme='dark'] .wysiwyg-root code { background: var(--code-bg); border-color: #525c6c; }
 
 /* Inline mark / highlight (Typora-style) */
-.wysiwyg-root mark { background: #ffeb3b; color: #1d1b12; }
-:root[data-theme='dark'] .wysiwyg-root mark { background: #ffeb3b; color: #1d1b12; }
-.toolbar button[data-action='highlight'] { background: #ffeb3b; color: #1d1b12; }
+.wysiwyg-root mark { background: #ffc247; color: #1d1b12; }
+:root[data-theme='dark'] .wysiwyg-root mark { background: #ffc247; color: #1d1b12; }
+.toolbar button[data-action='highlight'] { background: #ffc247; color: #1d1b12; }
 :root[data-theme='dark'] .toolbar button[data-action='highlight'] { color: #1d1b12; }
 
 /* GFM task lists: checkbox toggling the "[ ]" / "[x]" source character;
