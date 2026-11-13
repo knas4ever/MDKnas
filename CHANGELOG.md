@@ -2,6 +2,23 @@
 
 Version numbers are the build date: `ÅÅÅÅ.M.D`.
 
+## 2026.11.14
+
+### Features
+- **Spell check** in the editor: red underlines, right-click suggestions and
+  "Add to dictionary", plus a **Spelling** menu to pick languages (saved
+  between sessions). Code and math are not checked.
+- Lower startup cost and memory: Mermaid and KaTeX load on demand, only the
+  common highlight.js languages are bundled, and GPU process is disabled.
+- Softer, more orange highlight colour.
+
+### Fixes
+- Picking a spelling suggestion no longer reverts when you keep typing.
+- Spell check keeps working after switching Rich ↔ Raw, opening another file
+  and using toolbar buttons (toolbar clicks no longer steal editor focus).
+- Formatting a double-click selection no longer puts the trailing space
+  inside the markers (`**word **` → `**word** `).
+
 ## 2026.11.13
 
 ### Features
