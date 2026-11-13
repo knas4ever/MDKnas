@@ -17,10 +17,6 @@
   caret-color: #3b82f6;
 }
 .wysiwyg-root:focus { outline: none; }
-/* Make spell-check marks easy to see on dark themes. */
-.wysiwyg-root ::spelling-error {
-  text-decoration: underline wavy #ff4d4d 2px;
-}
 
 /* The editor draws its own caret: the browser paints a 1px bar that is hard
    to spot (and paints nothing at all inside the zero-width coverage spans
