@@ -30,6 +30,13 @@ jobs:
         with:
           name: mdknas-tauri-win
           path: src-tauri/target/release/mdknas.exe
+      - name: Build MSIX (unsigned, for Store upload)
+        shell: pwsh
+        run: ./msix/pack.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mdknas-msix
+          path: msix-out/*.msix
       - name: Smoke test
         continue-on-error: true
         shell: pwsh
