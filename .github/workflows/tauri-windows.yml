@@ -30,3 +30,11 @@ jobs:
         with:
           name: mdknas-tauri-win
           path: src-tauri/target/release/mdknas.exe
+      - name: Smoke test
+        continue-on-error: true
+        run: node scripts/tauri-smoke.mjs src-tauri/target/release/mdknas.exe
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tauri-smoke
+          path: tauri-smoke/
