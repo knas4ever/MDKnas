@@ -32,7 +32,11 @@ jobs:
           path: src-tauri/target/release/mdknas.exe
       - name: Smoke test
         continue-on-error: true
-        run: node scripts/tauri-smoke.mjs src-tauri/target/release/mdknas.exe
+        shell: pwsh
+        run: |
+          $cfg = '{"app":{"windows":[{"title":"MDKnas","width":1200,"height":800,"dragDropEnabled":false,"additionalBrowserArgs":"--remote-debugging-port=9222 --disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection"}]}}'
+          npx tauri build --no-bundle --config $cfg
+          node scripts/tauri-smoke.mjs src-tauri/target/release/mdknas.exe
       - uses: actions/upload-artifact@v4
         if: always()
         with:
