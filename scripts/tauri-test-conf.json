@@ -1,0 +1,13 @@
+{
+  "app": {
+    "windows": [
+      {
+        "title": "MDKnas",
+        "width": 1200,
+        "height": 800,
+        "dragDropEnabled": false,
+        "additionalBrowserArgs": "--remote-debugging-port=9222 --disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection"
+      }
+    ]
+  }
+}
