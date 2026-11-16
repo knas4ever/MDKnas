@@ -36,7 +36,18 @@ try {
     try { browser = await chromium.connectOverCDP('http://127.0.0.1:9222'); }
     catch { await new Promise(r => setTimeout(r, 1000)); }
   }
-  if (!browser) throw new Error('could not attach to WebView2');
+  if (!browser) {
+    log.push(`exitCode: ${proc.exitCode} killed: ${proc.killed}`);
+    try { shot('0-attach-failed.png'); } catch (e) { log.push(`shot failed ${e.message}`); }
+    for (const cmd of [
+      'Get-Process mdknas,msedgewebview2 -ErrorAction SilentlyContinue | Select Name,Id,MainWindowTitle | Out-String',
+      'Get-ItemProperty "HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\EdgeUpdate\\Clients\\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" -ErrorAction SilentlyContinue | Select pv | Out-String',
+      'netstat -ano | Select-String 9222 | Out-String'
+    ]) {
+      try { log.push(execFileSync('powershell', ['-NoProfile', '-Command', cmd]).toString()); } catch (e) { log.push(`diag failed ${e.message}`); }
+    }
+    throw new Error('could not attach to WebView2');
+  }
   const page = browser.contexts()[0].pages()[0];
   await page.waitForTimeout(3000);
 
