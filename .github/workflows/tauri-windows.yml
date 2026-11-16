@@ -1,0 +1,32 @@
+name: Tauri Windows build (PoC)
+
+on:
+  push:
+    branches: [feat/tauri-poc]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tauri build --no-bundle
+      - name: Report size
+        shell: pwsh
+        run: |
+          $f = Get-Item src-tauri\target\release\mdknas.exe
+          "mdknas.exe: {0:N1} MB" -f ($f.Length / 1MB) | Tee-Object -Append $env:GITHUB_STEP_SUMMARY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mdknas-tauri-win
+          path: src-tauri/target/release/mdknas.exe

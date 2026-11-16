@@ -1,0 +1,22 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "MDKnas",
+  "version": "2026.11.15",
+  "identifier": "dk.mdknas.app",
+  "build": {
+    "beforeDevCommand": "npm run dev:vite",
+    "devUrl": "http://127.0.0.1:5173",
+    "beforeBuildCommand": "npm run build:renderer",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      { "title": "MDKnas", "width": 1200, "height": 800, "dragDropEnabled": false }
+    ],
+    "security": { "csp": null }
+  },
+  "bundle": {
+    "active": false,
+    "icon": ["../build/icon.ico", "../build/icon.png"]
+  }
+}

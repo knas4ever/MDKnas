@@ -8,6 +8,8 @@
     "dev": "concurrently -k \"vite\" \"npm:dev:electron\"",
     "dev:electron": "wait-on tcp:127.0.0.1:5173 && npm run build:electron && electron . --dev",
     "build:renderer": "vite build",
+    "dev:vite": "vite",
+    "tauri": "tauri",
     "build:electron": "esbuild electron/main.ts electron/preload.ts --platform=node --bundle --external:electron --outdir=dist-electron",
     "build": "npm run build:renderer && npm run build:electron",
     "test": "vitest run",
@@ -21,6 +23,7 @@
   "license": "MIT",
   "devDependencies": {
     "@playwright/test": "^1.44.0",
+    "@tauri-apps/cli": "^2.12.5",
     "@types/node": "^20.11.0",
     "@types/react": "^18.2.48",
     "@types/react-dom": "^18.2.18",
@@ -41,6 +44,7 @@
     "wait-on": "^7.2.0"
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.12.5",
     "@testing-library/react": "^16.3.3",
     "@types/markdown-it": "^14.2.0",
     "highlight.js": "^11.9.0",

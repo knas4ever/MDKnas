@@ -2,7 +2,6 @@ node_modules/
 dist/
 dist-electron/
 release/
-src-tauri/
 target/
 *.log
 test-results/
