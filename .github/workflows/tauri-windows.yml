@@ -1,8 +1,6 @@
 name: Tauri Windows build (PoC)
 
 on:
-  push:
-    branches: [feat/tauri-poc]
   workflow_dispatch:
 
 jobs:

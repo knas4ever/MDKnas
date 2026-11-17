@@ -41,6 +41,7 @@ fn user_dir() -> PathBuf {
     // Same folder Electron used, so settings and themes carry over.
     let base = std::env::var_os("APPDATA")
         .or_else(|| std::env::var_os("XDG_CONFIG_HOME"))
+        .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".config").into_os_string()))
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("."));
     base.join("MDKnas")

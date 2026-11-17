@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 
-// Implements window.api on top of Tauri commands. Under Electron the preload already defines it.
+// Implements window.api on top of Tauri commands.
 if ((window as any).__TAURI_INTERNALS__ && !(window as any).api) {
   const sub = <T,>(event: string, cb: (p: T) => void): (() => void) => {
     let off: (() => void) | null = null;

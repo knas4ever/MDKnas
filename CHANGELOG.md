@@ -2,6 +2,19 @@
 
 Version numbers are the build date: `ÅÅÅÅ.M.D`.
 
+## 2026.11.17
+
+### Features
+- **Rebuilt on Tauri (Rust)** — Electron is gone. The Windows app is now a
+  single ~5 MB executable (was ~200 MB) with much lower memory use and faster
+  startup. Also published as an MSIX for the Microsoft Store.
+- Linux AppImage and deb are built with Tauri too.
+
+### Fixes
+- The Spelling language menu and the in-app auto-updater are removed: spell
+  check language follows the operating system, and updates come through the
+  Microsoft Store or the GitHub release.
+
 ## 2026.11.15
 
 ### Features
