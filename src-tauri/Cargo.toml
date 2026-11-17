@@ -1,6 +1,6 @@
 [package]
 name = "mdknas"
-version = "2026.11.17"
+version = "2026.11.18"
 description = "MDKnas — the crispy WYSIWYG markdown editor"
 edition = "2021"
 

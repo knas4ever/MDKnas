@@ -2,6 +2,11 @@
 
 Version numbers are the build date: `ÅÅÅÅ.M.D`.
 
+## 2026.11.18
+
+### Fixes
+- Theme dropdown is now dark in dark mode on Linux.
+
 ## 2026.11.17
 
 ### Features
