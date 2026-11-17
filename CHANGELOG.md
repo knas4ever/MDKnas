@@ -2,6 +2,11 @@
 
 Version numbers are the build date: `ÅÅÅÅ.M.D`.
 
+## 2026.11.20
+
+### Fixes
+- Check for Updates no longer fails on Linux AppImage (bundled libraries broke the system curl).
+
 ## 2026.11.19
 
 ### Features

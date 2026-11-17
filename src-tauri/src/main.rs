@@ -340,6 +340,8 @@ fn curl(args: &[&str]) -> Result<Vec<u8>, String> {
         use std::os::windows::process::CommandExt;
         cmd.creation_flags(0x0800_0000);
     }
+    // The AppImage runtime points LD_LIBRARY_PATH at its bundled libs, which breaks the system curl.
+    cmd.env_remove("LD_LIBRARY_PATH").env_remove("LD_PRELOAD");
     let out = cmd.args(["-fsSL", "--max-time", "600", "-H", "User-Agent: MDKnas"]).args(args).output().map_err(err)?;
     if out.status.success() { Ok(out.stdout) } else { Err(String::from_utf8_lossy(&out.stderr).to_string()) }
 }
