@@ -1,6 +1,6 @@
 # MDKnas
 
-MDKnas is a desktop WYSIWYG Markdown editor built with Electron, React, and
+MDKnas is a desktop WYSIWYG Markdown editor built with Tauri (Rust), React, and
 Vite. It keeps Markdown as the source of truth while providing a rich editing
 experience for common document structures.
 
@@ -48,23 +48,22 @@ npm run dev
 
 | Command | Purpose |
 | --- | --- |
-| `npm run dev` | Start Vite with Electron in development mode |
-| `npm run build` | Build the renderer and Electron main process |
+| `npm run dev` | Start the Tauri app with Vite hot reload |
+| `npm run build` | Build the app with Tauri |
 | `npm test` | Run Vitest unit tests |
 | `npm run lint` | Type-check the renderer |
-| `npm run typecheck:main` | Type-check the Electron main process |
-| `npm run e2e` | Build and run the Playwright end-to-end tests |
 | `npm run dist` | Build Linux AppImage and Debian packages |
-| `npm run dist:win` | Build an unpacked, unsigned Windows application in `release\win-unpacked` |
+| `npm run dist:win` | Build the Windows executable (`src-tauri\target\release\mdknas.exe`) |
 
 ## Project structure
 
 ```text
 src/                 React renderer and editor implementation
 src/lib/             Markdown rendering, cursor mapping, and text actions
-electron/            Electron main process, preload bridge, and IPC handlers
+src/tauriApi.ts      window.api bridge to the Rust commands
+src-tauri/           Rust backend (Tauri): files, dialogs, menus, settings
+msix/                Microsoft Store (MSIX) packaging
 tests/unit/          Vitest unit tests
-e2e/                 Playwright Electron tests
 build/               Application icons
 ```
 
@@ -75,16 +74,12 @@ and a new selection rather than mutating document content in the DOM.
 ## Releases
 
 Version numbers use the build date format `YYYY.M.D`. For a release, update
-`version` in `package.json` and add matching `Features` and `Fixes` sections
-to `CHANGELOG.md`, then build the desired platform package:
-
-```bash
-# Linux
-npm run dist
-
-# Windows
-npm run dist:win
-```
+`version` in `package.json`, `src-tauri/Cargo.toml` and
+`src-tauri/tauri.conf.json`, and add matching `Features` and `Fixes` sections
+to `CHANGELOG.md`. Pushing the version change to `master` builds Linux
+(AppImage, deb) and Windows (exe, unsigned MSIX for the Microsoft Store) via
+GitHub Actions and attaches them to a GitHub release. See `STORE.md` for Store
+publishing.
 
 `CHANGELOG.md` is bundled with the application and displayed in **Help →
 About**.
