@@ -2,6 +2,11 @@
 
 Version numbers are the build date: `ÅÅÅÅ.M.D`.
 
+## 2026.11.19
+
+### Features
+- **Update check** — checks GitHub for a newer release at startup and under Help → Check for Updates…. The Linux AppImage updates itself in place (restart afterwards); deb and Windows exe open the download page. Not shown for Microsoft Store installs.
+
 ## 2026.11.18
 
 ### Fixes

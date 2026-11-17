@@ -325,6 +325,87 @@ fn app_pending(state: tauri::State<AppState>) -> Value {
     })
 }
 
+const RELEASES_API: &str = "https://api.github.com/repos/knas4ever/MDKnas/releases/latest";
+
+// Microsoft Store installs are updated by the Store itself.
+fn is_store_install() -> bool {
+    std::env::current_exe().map(|p| p.to_string_lossy().contains("WindowsApps")).unwrap_or(false)
+}
+
+// Uses the system curl (present on Linux and Windows 10+) to avoid bundling a TLS stack.
+fn curl(args: &[&str]) -> Result<Vec<u8>, String> {
+    let mut cmd = std::process::Command::new("curl");
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x0800_0000);
+    }
+    let out = cmd.args(["-fsSL", "--max-time", "600", "-H", "User-Agent: MDKnas"]).args(args).output().map_err(err)?;
+    if out.status.success() { Ok(out.stdout) } else { Err(String::from_utf8_lossy(&out.stderr).to_string()) }
+}
+
+fn parse_version(v: &str) -> Vec<u32> {
+    v.trim_start_matches('v').split('.').map(|p| p.parse().unwrap_or(0)).collect()
+}
+
+fn install_appimage(url: &str) -> Result<(), String> {
+    let target = std::env::var("APPIMAGE").map_err(err)?;
+    let tmp = format!("{target}.new");
+    curl(&["-o", &tmp, url])?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&tmp, fs::Permissions::from_mode(0o755)).map_err(err)?;
+    }
+    fs::rename(&tmp, &target).map_err(err)
+}
+
+fn check_for_updates(app: &AppHandle, silent: bool) {
+    use tauri_plugin_dialog::{MessageDialogButtons, MessageDialogKind};
+    let say = |title: &str, msg: String| {
+        app.dialog().message(msg).title(title).kind(MessageDialogKind::Info).blocking_show();
+    };
+    let release: Value = match curl(&[RELEASES_API]).and_then(|b| serde_json::from_slice(&b).map_err(err)) {
+        Ok(r) => r,
+        Err(e) => {
+            if !silent { say("Check for Updates", format!("Could not check for updates.\n\n{e}")); }
+            return;
+        }
+    };
+    let latest = release["tag_name"].as_str().unwrap_or("").to_string();
+    let current = app.package_info().version.to_string();
+    if latest.is_empty() || parse_version(&latest) <= parse_version(&current) {
+        if !silent { say("Check for Updates", format!("MDKnas {current} is up to date.")); }
+        return;
+    }
+    let page = release["html_url"].as_str().unwrap_or("https://github.com/knas4ever/MDKnas/releases/latest").to_string();
+    let appimage = release["assets"].as_array().and_then(|a| {
+        a.iter().find_map(|x| {
+            let name = x["name"].as_str()?;
+            name.ends_with(".AppImage").then(|| x["browser_download_url"].as_str().map(String::from)).flatten()
+        })
+    });
+    let self_update = std::env::var("APPIMAGE").is_ok().then_some(()).and(appimage);
+    let ok = app
+        .dialog()
+        .message(format!("MDKnas {} is available (you have {current}).", latest.trim_start_matches('v')))
+        .title("Update available")
+        .kind(MessageDialogKind::Info)
+        .buttons(MessageDialogButtons::OkCancelCustom(
+            if self_update.is_some() { "Update".into() } else { "Open download page".into() },
+            "Later".into(),
+        ))
+        .blocking_show();
+    if !ok { return; }
+    match self_update {
+        Some(url) => match install_appimage(&url) {
+            Ok(()) => say("Update installed", "Restart MDKnas to use the new version.".into()),
+            Err(e) => say("Update failed", format!("{e}\n\nDownload it manually from:\n{page}")),
+        },
+        None => { let _ = tauri_plugin_opener::open_url(page, None::<&str>); }
+    }
+}
+
 fn build_menu(app: &AppHandle) -> tauri::Result<(Menu<Wry>, CheckMenuItem<Wry>)> {
     let it = |id: &str, label: &str, accel: Option<&str>| MenuItem::with_id(app, id, label, true, accel);
     let sep = || PredefinedMenuItem::separator(app);
@@ -385,7 +466,11 @@ fn build_menu(app: &AppHandle) -> tauri::Result<(Menu<Wry>, CheckMenuItem<Wry>)>
         &PredefinedMenuItem::minimize(app, None)?,
         &PredefinedMenuItem::close_window(app, None)?,
     ])?;
-    let help = Submenu::with_items(app, "Help", true, &[&it("about", "About", None)?])?;
+    let help = Submenu::with_items(app, "Help", true, &[])?;
+    if !is_store_install() {
+        help.append(&it("checkUpdates", "Check for Updates…", None)?)?;
+    }
+    help.append(&it("about", "About", None)?)?;
     let menu = Menu::with_items(app, &[&file, &edit, &format, &view, &window, &help])?;
     Ok((menu, source))
 }
@@ -414,6 +499,13 @@ fn main() {
             let (file, folder) = startup_args();
             *state.pending_file.lock().unwrap() = file;
             *state.pending_folder.lock().unwrap() = folder;
+            if !is_store_install() {
+                let handle = handle.clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(Duration::from_secs(5));
+                    check_for_updates(&handle, true);
+                });
+            }
             Ok(())
         })
         .on_menu_event(|app, event| {
@@ -425,6 +517,9 @@ fn main() {
                         let _ = app.emit("app:open-file", p);
                     }
                 });
+            } else if id == "checkUpdates" {
+                let app = app.clone();
+                std::thread::spawn(move || check_for_updates(&app, false));
             } else {
                 let _ = app.emit("app:menu", id);
             }
