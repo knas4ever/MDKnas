@@ -205,7 +205,11 @@
   --pre-bg: #23252c;
   --sidebar-bg: #1a1b20;
   --menu-hover: #23252c;
+  color-scheme: dark;
 }
+
+/* WebKitGTK draws the dropdown list natively; give it explicit colours. */
+select, select option { background-color: var(--bg); color: var(--fg); }
 
 :root[data-theme='dark'] .wysiwyg-root { color: var(--fg); }
 :root[data-theme='dark'] .wysiwyg-root a { color: var(--accent); }
