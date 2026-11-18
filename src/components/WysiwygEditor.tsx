@@ -519,6 +519,7 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
   ref
 ) {
   const caretRef = useRef<HTMLDivElement | null>(null);
+  const bandRef = useRef<HTMLDivElement | null>(null);
   const docDir = file ? dirname(file) : null;
   const assetsName = file
     ? `${basename(file).replace(/\.[^.]*$/, '')}_assets`
@@ -771,12 +772,21 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
     }
     if (!drawn && caretRef.current.parentElement === root) caretRef.current.remove();
     root.style.caretColor = drawn ? 'transparent' : '';
-    if (typewriter) {
-      const sel = window.getSelection();
-      if (sel && sel.anchorNode && root.contains(sel.anchorNode)) {
-        const block = (sel.anchorNode.parentElement ?? root).closest('[data-bi]');
-        if (block) block.setAttribute('data-active-line', 'true');
+    // Typewriter mode: a transparent band over the caret's line whose huge
+    // box-shadow dims everything else, so only the line being written stays bright.
+    if (typewriter && drawn) {
+      if (!bandRef.current) {
+        bandRef.current = document.createElement('div');
+        bandRef.current.className = 'tw-band';
+        bandRef.current.contentEditable = 'false';
+        bandRef.current.setAttribute('aria-hidden', 'true');
       }
+      const c = caretRef.current;
+      bandRef.current.style.top = `${parseFloat(c.style.top) - 3}px`;
+      bandRef.current.style.height = `${parseFloat(c.style.height) + 6}px`;
+      if (bandRef.current.parentElement !== root) root.appendChild(bandRef.current);
+    } else if (bandRef.current?.parentElement === root) {
+      bandRef.current.remove();
     }
     pendingRender.current = false;
   }, [content, selection, typewriter, imgVersion, docDir]);

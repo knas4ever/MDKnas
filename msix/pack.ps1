@@ -31,6 +31,8 @@ function Save-Logo($name, $w, $h) {
 Save-Logo 'StoreLogo' 50 50
 Save-Logo 'Square44x44Logo' 44 44
 Save-Logo 'Square150x150Logo' 150 150
+# Unplated variants stop Windows drawing a grey tile behind the taskbar icon.
+foreach ($t in 16, 24, 32, 48, 256) { Save-Logo "Square44x44Logo.targetsize-${t}_altform-unplated" $t $t }
 
 $makeappx = Get-ChildItem 'C:\Program Files (x86)\Windows Kits\10\bin\*\x64\makeappx.exe' |
   Sort-Object FullName -Descending | Select-Object -First 1

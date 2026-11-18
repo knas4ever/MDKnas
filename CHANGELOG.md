@@ -2,6 +2,12 @@
 
 Version numbers are the build date: `ÅÅÅÅ.M.D`.
 
+## 2026.11.21
+
+### Fixes
+- Typewriter mode now keeps only the line you are writing bright (was the whole paragraph).
+- Windows Store: removed the grey tile behind the taskbar icon.
+
 ## 2026.11.20
 
 ### Fixes

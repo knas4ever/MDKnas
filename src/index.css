@@ -272,5 +272,11 @@ select, select option { background-color: var(--bg); color: var(--fg); }
 }
 
 /* --- Typewriter mode --- */
-.wysiwyg-root[data-typewriter='true'] [data-bi] { opacity: 0.25; }
-.wysiwyg-root[data-typewriter='true'] [data-bi][data-active-line] { opacity: 1; }
+.wysiwyg-root .tw-band {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 4;
+  box-shadow: 0 0 0 100vmax color-mix(in srgb, var(--bg) 72%, transparent);
+}
