@@ -1,32 +1,46 @@
 name: Publish to Microsoft Store
 
-# Manual trigger or a version tag. Needs the repository secrets listed in STORE.md.
+# Runs after each successful Release workflow and submits its MSIX to the Store.
+# Can also be run by hand (re-publishes the MSIX of the latest successful Release run).
+# Needs the repository secrets listed in STORE.md; without them the steps are skipped.
 on:
+  workflow_run:
+    workflows: ['Release (Linux AppImage + deb, Windows exe + MSIX)']
+    types: [completed]
   workflow_dispatch:
-  push:
-    tags: ['store-v*']
+
+permissions:
+  contents: read
+  actions: read
 
 jobs:
   publish:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: windows-latest
+    env:
+      STORE_PRODUCT_ID: ${{ secrets.STORE_PRODUCT_ID }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri
-      - run: npm ci
-      - run: npm test
-      - run: npx tauri build --no-bundle
-      - name: Build MSIX
+      - name: Find the Release run
+        id: run
         shell: pwsh
-        run: ./msix/pack.ps1
+        run: |
+          if ('${{ github.event_name }}' -eq 'workflow_run') { $id = '${{ github.event.workflow_run.id }}' }
+          else {
+            $runs = Invoke-RestMethod -Headers @{ Authorization = "Bearer ${{ github.token }}" } "https://api.github.com/repos/${{ github.repository }}/actions/workflows/release.yml/runs?status=success&per_page=1"
+            $id = $runs.workflow_runs[0].id
+          }
+          "id=$id" >> $env:GITHUB_OUTPUT
+      - uses: actions/download-artifact@v5
+        if: env.STORE_PRODUCT_ID != ''
+        with:
+          name: MDKnas-msix
+          path: msix-out
+          run-id: ${{ steps.run.outputs.id }}
+          github-token: ${{ github.token }}
       - uses: microsoft/microsoft-store-apppublisher@v1.4
+        if: env.STORE_PRODUCT_ID != ''
       - name: Configure Store credentials
+        if: env.STORE_PRODUCT_ID != ''
         shell: pwsh
         run: >
           msstore reconfigure
@@ -35,9 +49,8 @@ jobs:
           --clientId ${{ secrets.STORE_CLIENT_ID }}
           --clientSecret ${{ secrets.STORE_CLIENT_SECRET }}
       - name: Submit package
+        if: env.STORE_PRODUCT_ID != ''
         shell: pwsh
-        run: msstore publish msix-out\pkg -id ${{ secrets.STORE_PRODUCT_ID }}
-      - uses: actions/upload-artifact@v4
-        with:
-          name: mdknas-msix-released
-          path: msix-out/*.msix
+        run: |
+          $msix = (Get-ChildItem msix-out -Recurse -Filter *.msix | Select-Object -First 1).FullName
+          msstore publish $msix -id $env:STORE_PRODUCT_ID

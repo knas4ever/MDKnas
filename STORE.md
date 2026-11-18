@@ -4,6 +4,6 @@
 2. In Partner Center → Account settings → Manage users, add an Azure AD application with the **Manager** role. Copy its Tenant ID and Client ID, and create a client secret.
 3. Add these repository secrets (Settings → Secrets and variables → Actions):
    `STORE_TENANT_ID`, `STORE_CLIENT_ID`, `STORE_CLIENT_SECRET`, `STORE_SELLER_ID` (Account settings → Legal info), `STORE_PRODUCT_ID` (the app's Partner Center ID).
-4. To release: bump `version` in `package.json` (build date `YYYY.M.D`) and update `CHANGELOG.md`. Then run the **Publish to Microsoft Store** workflow, or push a tag such as `store-v2026.12.1`.
+4. To release: bump `version` in `package.json` (build date `YYYY.M.D`) and update `CHANGELOG.md`, then push to `master`. The Release workflow builds the MSIX and **Publish to Microsoft Store** then submits it automatically (skipped while the secrets are missing). It can also be run by hand to re-submit the latest build.
 
 The Store version is `YYYY.M.D.0`, so it must be higher than the previously published version.
