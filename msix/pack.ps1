@@ -11,8 +11,9 @@ Copy-Item $Exe $pkg
 
 # Store version must be a.b.c.0
 $v = (Get-Content package.json -Raw | ConvertFrom-Json).version
-$parts = $v.Split('.')
-$version = "$($parts[0]).$($parts[1]).$($parts[2]).0"
+# "2026.11.25-1" (daily build number) -> the Store only accepts a.b.c.0
+if ($v -notmatch '^(\d+)\.(\d+)\.(\d+)') { throw "Unexpected version: $v" }
+$version = "$($Matches[1]).$($Matches[2]).$($Matches[3]).0"
 (Get-Content msix\AppxManifest.xml -Raw).Replace('__VERSION__', $version) |
   Set-Content "$pkg\AppxManifest.xml" -Encoding UTF8
 

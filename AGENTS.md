@@ -1,7 +1,7 @@
 # MDKnas — agent guide
 
 ## Release process
-- Versionsnummer er build-datoen i formatet `ÅÅÅÅ.M.D` (f.eks. `2026.9.22`) i `package.json`
+- Versionsnummer er build-datoen plus et løbende nummer for dagen, `ÅÅÅÅ.M.D-N` (f.eks. `2026.12.1-1`, næste samme dag `2026.12.1-2`) i `package.json`. (Semver tillader ikke foranstillede nuller, så `-1` og ikke `-001`.) Store-pakken bliver `ÅÅÅÅ.M.D.0`, så to udgivelser samme dag deler Store-versionen.
 - Ved udgivelse: opdatér `version` i `package.json`, `src-tauri/Cargo.toml`
   og `src-tauri/tauri.conf.json`, tilføj et afsnit til `CHANGELOG.md`
   (sektioner `### Features` og `### Fixes`), commit + push til `master`.

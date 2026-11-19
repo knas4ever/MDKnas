@@ -1,6 +1,6 @@
 # Changelog
 
-Version numbers are the build date: `ÅÅÅÅ.M.D`.
+Version numbers are the build date plus a running number for the day: `YYYY.M.D-N` (older releases are plain `YYYY.M.D`).
 
 ## 2026.11.25
 

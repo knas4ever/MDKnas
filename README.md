@@ -73,7 +73,7 @@ and a new selection rather than mutating document content in the DOM.
 
 ## Releases
 
-Version numbers use the build date format `YYYY.M.D`. For a release, update
+Version numbers are the build date plus a running number for the day: `YYYY.M.D-N` (e.g. `2026.12.1-1`; older releases are plain `YYYY.M.D`). For a release, update
 `version` in `package.json`, `src-tauri/Cargo.toml` and
 `src-tauri/tauri.conf.json`, and add matching `Features` and `Fixes` sections
 to `CHANGELOG.md`. Pushing the version change to `master` builds Linux

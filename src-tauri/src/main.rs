@@ -346,9 +346,17 @@ fn curl(args: &[&str]) -> Result<Vec<u8>, String> {
     if out.status.success() { Ok(out.stdout) } else { Err(String::from_utf8_lossy(&out.stderr).to_string()) }
 }
 
-// Compared as year.month.day only: the Store's fourth component is always 0.
+// year.month.day plus the optional daily build number ("2026.11.25-1"). The Store's
+// fourth component is always 0, so it compares equal to a plain date version.
 fn parse_version(v: &str) -> Vec<u32> {
-    v.trim_start_matches('v').split('.').take(3).map(|p| p.parse().unwrap_or(0)).collect()
+    let mut parts: Vec<u32> = v
+        .trim_start_matches('v')
+        .split(|c| c == '.' || c == '-')
+        .take(4)
+        .map(|p| p.parse().unwrap_or(0))
+        .collect();
+    parts.resize(4, 0);
+    parts
 }
 
 // The file to replace in place: the AppImage on Linux, the exe itself on Windows
