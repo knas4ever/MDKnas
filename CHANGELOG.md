@@ -2,6 +2,11 @@
 
 Version numbers are the build date: `ÅÅÅÅ.M.D`.
 
+## 2026.11.24
+
+### Fixes
+- Store installs now compare against the version actually published in the Store, not the GitHub releases.
+
 ## 2026.11.23
 
 ### Features

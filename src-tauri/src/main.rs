@@ -346,8 +346,9 @@ fn curl(args: &[&str]) -> Result<Vec<u8>, String> {
     if out.status.success() { Ok(out.stdout) } else { Err(String::from_utf8_lossy(&out.stderr).to_string()) }
 }
 
+// Compared as year.month.day only: the Store's fourth component is always 0.
 fn parse_version(v: &str) -> Vec<u32> {
-    v.trim_start_matches('v').split('.').map(|p| p.parse().unwrap_or(0)).collect()
+    v.trim_start_matches('v').split('.').take(3).map(|p| p.parse().unwrap_or(0)).collect()
 }
 
 // The file to replace in place: the AppImage on Linux, the exe itself on Windows
@@ -382,25 +383,46 @@ fn install_update(target: &Path, url: &str) -> Result<(), String> {
     }
 }
 
+const STORE_CATALOG: &str =
+    "https://displaycatalog.mp.microsoft.com/v7.0/products/9N2K3XZF5XTC?market=DK&languages=en-US&MS-CV=DGU1mcuYo0WMMp+F.1";
+
+// The newest version listed for the app in the Store, from its package names (Knas.MDKnas_<ver>_...).
+fn store_latest_version() -> Result<String, String> {
+    let body = String::from_utf8_lossy(&curl(&[STORE_CATALOG])?).to_string();
+    body.split("Knas.MDKnas_")
+        .skip(1)
+        .filter_map(|s| s.split('_').next())
+        .max_by_key(|v| parse_version(v))
+        .map(String::from)
+        .ok_or_else(|| "Store version not found".to_string())
+}
+
 fn check_for_updates(app: &AppHandle, silent: bool) {
     use tauri_plugin_dialog::{MessageDialogButtons, MessageDialogKind};
     let say = |title: &str, msg: String| {
         app.dialog().message(msg).title(title).kind(MessageDialogKind::Info).blocking_show();
     };
-    let release: Value = match curl(&[RELEASES_API]).and_then(|b| serde_json::from_slice(&b).map_err(err)) {
+    let store = is_store_install();
+    // Store installs follow the version actually published in the Store, which can lag the GitHub releases.
+    let fetched: Result<(Value, String), String> = if store {
+        store_latest_version().map(|v| (Value::Null, v))
+    } else {
+        curl(&[RELEASES_API])
+            .and_then(|b| serde_json::from_slice::<Value>(&b).map_err(err))
+            .map(|r| { let tag = r["tag_name"].as_str().unwrap_or("").to_string(); (r, tag) })
+    };
+    let (release, latest) = match fetched {
         Ok(r) => r,
         Err(e) => {
             if !silent { say("Check for Updates", format!("Could not check for updates.\n\n{e}")); }
             return;
         }
     };
-    let latest = release["tag_name"].as_str().unwrap_or("").to_string();
     let current = app.package_info().version.to_string();
     if latest.is_empty() || parse_version(&latest) <= parse_version(&current) {
         if !silent { say("Check for Updates", format!("MDKnas {current} is up to date.")); }
         return;
     }
-    let store = is_store_install();
     let page = if store {
         "https://apps.microsoft.com/detail/9N2K3XZF5XTC".to_string()
     } else {
