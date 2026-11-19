@@ -80,3 +80,5 @@ jobs:
           ZIP="MDKnas-$VERSION-win-x64.zip"
           powershell -Command "Compress-Archive -Path src-tauri/target/release/mdknas.exe -DestinationPath $ZIP"
           gh release upload "v$VERSION" "$ZIP" msix-out/*.msix --clobber
+          cp src-tauri/target/release/mdknas.exe MDKnas-win-x64.exe
+          gh release upload "v$VERSION" MDKnas-win-x64.exe --clobber

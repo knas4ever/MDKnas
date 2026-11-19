@@ -2,6 +2,11 @@
 
 Version numbers are the build date: `ÅÅÅÅ.M.D`.
 
+## 2026.11.22
+
+### Features
+- The Windows exe now updates itself in place (restart afterwards), like the Linux AppImage. Store installs are still updated by the Store.
+
 ## 2026.11.21
 
 ### Fixes

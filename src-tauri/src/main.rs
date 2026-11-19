@@ -350,16 +350,36 @@ fn parse_version(v: &str) -> Vec<u32> {
     v.trim_start_matches('v').split('.').map(|p| p.parse().unwrap_or(0)).collect()
 }
 
-fn install_appimage(url: &str) -> Result<(), String> {
-    let target = std::env::var("APPIMAGE").map_err(err)?;
-    let tmp = format!("{target}.new");
-    curl(&["-o", &tmp, url])?;
+// The file to replace in place: the AppImage on Linux, the exe itself on Windows
+// (a running exe cannot be overwritten, but it can be renamed).
+fn update_target() -> Option<(PathBuf, &'static str)> {
+    if cfg!(windows) {
+        std::env::current_exe().ok().map(|p| (p, "MDKnas-win-x64.exe"))
+    } else {
+        std::env::var("APPIMAGE").ok().map(|p| (PathBuf::from(p), ".AppImage"))
+    }
+}
+
+fn install_update(target: &Path, url: &str) -> Result<(), String> {
+    let tmp = PathBuf::from(format!("{}.new", target.display()));
+    curl(&["-o", &tmp.to_string_lossy(), url])?;
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
         fs::set_permissions(&tmp, fs::Permissions::from_mode(0o755)).map_err(err)?;
     }
-    fs::rename(&tmp, &target).map_err(err)
+    if cfg!(windows) {
+        let old = PathBuf::from(format!("{}.old", target.display()));
+        let _ = fs::remove_file(&old);
+        fs::rename(target, &old).map_err(err)?;
+        if let Err(e) = fs::rename(&tmp, target) {
+            let _ = fs::rename(&old, target);
+            return Err(err(e));
+        }
+        Ok(())
+    } else {
+        fs::rename(&tmp, target).map_err(err)
+    }
 }
 
 fn check_for_updates(app: &AppHandle, silent: bool) {
@@ -381,13 +401,15 @@ fn check_for_updates(app: &AppHandle, silent: bool) {
         return;
     }
     let page = release["html_url"].as_str().unwrap_or("https://github.com/knas4ever/MDKnas/releases/latest").to_string();
-    let appimage = release["assets"].as_array().and_then(|a| {
-        a.iter().find_map(|x| {
+    let target = update_target();
+    let asset = target.as_ref().and_then(|(_, suffix)| {
+        release["assets"].as_array()?.iter().find_map(|x| {
             let name = x["name"].as_str()?;
-            name.ends_with(".AppImage").then(|| x["browser_download_url"].as_str().map(String::from)).flatten()
+            if !name.ends_with(suffix) { return None; }
+            x["browser_download_url"].as_str().map(String::from)
         })
     });
-    let self_update = std::env::var("APPIMAGE").is_ok().then_some(()).and(appimage);
+    let self_update = target.zip(asset);
     let ok = app
         .dialog()
         .message(format!("MDKnas {} is available (you have {current}).", latest.trim_start_matches('v')))
@@ -400,7 +422,7 @@ fn check_for_updates(app: &AppHandle, silent: bool) {
         .blocking_show();
     if !ok { return; }
     match self_update {
-        Some(url) => match install_appimage(&url) {
+        Some(((path, _), url)) => match install_update(&path, &url) {
             Ok(()) => say("Update installed", "Restart MDKnas to use the new version.".into()),
             Err(e) => say("Update failed", format!("{e}\n\nDownload it manually from:\n{page}")),
         },
@@ -502,6 +524,9 @@ fn main() {
             *state.pending_file.lock().unwrap() = file;
             *state.pending_folder.lock().unwrap() = folder;
             if !is_store_install() {
+                if let Ok(exe) = std::env::current_exe() {
+                    let _ = fs::remove_file(format!("{}.old", exe.display()));
+                }
                 let handle = handle.clone();
                 std::thread::spawn(move || {
                     std::thread::sleep(Duration::from_secs(5));

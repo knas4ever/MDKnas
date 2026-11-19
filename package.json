@@ -1,7 +1,7 @@
 {
   "name": "mdknas",
   "productName": "MDKnas",
-  "version": "2026.11.21",
+  "version": "2026.11.22",
   "description": "MDKnas — the crispy WYSIWYG markdown editor",
   "scripts": {
     "dev": "tauri dev",
