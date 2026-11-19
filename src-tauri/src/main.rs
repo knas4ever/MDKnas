@@ -383,6 +383,7 @@ fn install_update(target: &Path, url: &str) -> Result<(), String> {
     }
 }
 
+const STORE_INSTALLER: &str = "https://get.microsoft.com/installer/download/9N2K3XZF5XTC?cid=DevShareMCLPCS";
 const STORE_CATALOG: &str =
     "https://displaycatalog.mp.microsoft.com/v7.0/products/9N2K3XZF5XTC?market=DK&languages=en-US&MS-CV=DGU1mcuYo0WMMp+F.1";
 
@@ -444,7 +445,7 @@ fn check_for_updates(app: &AppHandle, silent: bool) {
         .title("Update available")
         .kind(MessageDialogKind::Info)
         .buttons(MessageDialogButtons::OkCancelCustom(
-            if self_update.is_some() { "Update".into() } else if store { "Open Store page".into() } else { "Open download page".into() },
+            if self_update.is_some() || store { "Update".into() } else { "Open download page".into() },
             "Later".into(),
         ))
         .blocking_show();
@@ -454,6 +455,16 @@ fn check_for_updates(app: &AppHandle, silent: bool) {
             Ok(()) => say("Update installed", "Restart MDKnas to use the new version.".into()),
             Err(e) => say("Update failed", format!("{e}\n\nDownload it manually from:\n{page}")),
         },
+        None if store => {
+            // Microsoft's own web installer: it fetches and installs the newest Store version.
+            let exe = std::env::temp_dir().join("MDKnas Installer.exe");
+            let started = curl(&["-o", &exe.to_string_lossy(), STORE_INSTALLER])
+                .and_then(|_| std::process::Command::new(&exe).spawn().map(|_| ()).map_err(err));
+            if let Err(e) = started {
+                say("Update failed", format!("{e}\n\nOpen the Store page instead:\n{page}"));
+                let _ = tauri_plugin_opener::open_url(page, None::<&str>);
+            }
+        }
         None => { let _ = tauri_plugin_opener::open_url(page, None::<&str>); }
     }
 }
