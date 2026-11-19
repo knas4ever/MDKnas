@@ -2,6 +2,11 @@
 
 Version numbers are the build date: `ÅÅÅÅ.M.D`.
 
+## 2026.11.23
+
+### Features
+- Microsoft Store installs now show a new-version message with a link to the Store page (Help - Check for Updates).
+
 ## 2026.11.22
 
 ### Features

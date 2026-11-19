@@ -400,8 +400,14 @@ fn check_for_updates(app: &AppHandle, silent: bool) {
         if !silent { say("Check for Updates", format!("MDKnas {current} is up to date.")); }
         return;
     }
-    let page = release["html_url"].as_str().unwrap_or("https://github.com/knas4ever/MDKnas/releases/latest").to_string();
-    let target = update_target();
+    let store = is_store_install();
+    let page = if store {
+        "https://apps.microsoft.com/detail/9N2K3XZF5XTC".to_string()
+    } else {
+        release["html_url"].as_str().unwrap_or("https://github.com/knas4ever/MDKnas/releases/latest").to_string()
+    };
+    // Store installs live in a protected folder and are updated through the Store page.
+    let target = if store { None } else { update_target() };
     let asset = target.as_ref().and_then(|(_, suffix)| {
         release["assets"].as_array()?.iter().find_map(|x| {
             let name = x["name"].as_str()?;
@@ -416,7 +422,7 @@ fn check_for_updates(app: &AppHandle, silent: bool) {
         .title("Update available")
         .kind(MessageDialogKind::Info)
         .buttons(MessageDialogButtons::OkCancelCustom(
-            if self_update.is_some() { "Update".into() } else { "Open download page".into() },
+            if self_update.is_some() { "Update".into() } else if store { "Open Store page".into() } else { "Open download page".into() },
             "Later".into(),
         ))
         .blocking_show();
@@ -491,9 +497,7 @@ fn build_menu(app: &AppHandle) -> tauri::Result<(Menu<Wry>, CheckMenuItem<Wry>)>
         &PredefinedMenuItem::close_window(app, None)?,
     ])?;
     let help = Submenu::with_items(app, "Help", true, &[])?;
-    if !is_store_install() {
-        help.append(&it("checkUpdates", "Check for Updates…", None)?)?;
-    }
+    help.append(&it("checkUpdates", "Check for Updates…", None)?)?;
     help.append(&it("about", "About", None)?)?;
     let menu = Menu::with_items(app, &[&file, &edit, &format, &view, &window, &help])?;
     Ok((menu, source))
@@ -527,12 +531,12 @@ fn main() {
                 if let Ok(exe) = std::env::current_exe() {
                     let _ = fs::remove_file(format!("{}.old", exe.display()));
                 }
-                let handle = handle.clone();
-                std::thread::spawn(move || {
-                    std::thread::sleep(Duration::from_secs(5));
-                    check_for_updates(&handle, true);
-                });
             }
+            let handle = handle.clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(Duration::from_secs(5));
+                check_for_updates(&handle, true);
+            });
             Ok(())
         })
         .on_menu_event(|app, event| {
