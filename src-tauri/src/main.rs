@@ -346,8 +346,11 @@ fn curl(args: &[&str]) -> Result<Vec<u8>, String> {
     if out.status.success() { Ok(out.stdout) } else { Err(String::from_utf8_lossy(&out.stderr).to_string()) }
 }
 
-// year.month.day plus the optional daily build number ("2026.11.25-1"). The Store's
-// fourth component is always 0, so it compares equal to a plain date version.
+// year.month.day plus the optional daily build number ("2026.11.26-1" or the
+// GitHub tag "v2026.11.26.1"). The dot form is what releases publish: builds
+// through 2026.11.25 split the tag on '.' only, and "26-1" parses as 0, so a
+// hyphen tag looks older than the installed app. The Store's fourth component
+// is always 0, so it compares equal to a plain date version.
 fn parse_version(v: &str) -> Vec<u32> {
     let mut parts: Vec<u32> = v
         .trim_start_matches('v')

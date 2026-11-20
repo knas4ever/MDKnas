@@ -73,7 +73,7 @@ and a new selection rather than mutating document content in the DOM.
 
 ## Releases
 
-Version numbers are the build date plus a running number for the day: `YYYY.M.D-N` (e.g. `2026.12.1-1`; older releases are plain `YYYY.M.D`). For a release, update
+Version numbers are the build date plus a running number for the day: `YYYY.M.D-N` (e.g. `2026.12.1-1`; older releases are plain `YYYY.M.D`). The GitHub release tag uses a dot for that build number (`v2026.12.1.1`) so AppImages and exes from 2026.11.19–2026.11.25, which only split the tag on `.`, still see it as newer. For a release, update
 `version` in `package.json`, `src-tauri/Cargo.toml` and
 `src-tauri/tauri.conf.json`, and add matching `Features` and `Fixes` sections
 to `CHANGELOG.md`. Pushing the version change to `master` builds Linux

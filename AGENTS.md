@@ -1,7 +1,7 @@
 # MDKnas — agent guide
 
 ## Release process
-- Versionsnummer er build-datoen plus et løbende nummer for dagen, `ÅÅÅÅ.M.D-N` (f.eks. `2026.12.1-1`, næste samme dag `2026.12.1-2`) i `package.json`. (Semver tillader ikke foranstillede nuller, så `-1` og ikke `-001`.) Store-pakken bliver `ÅÅÅÅ.M.D.0`, så to udgivelser samme dag deler Store-versionen.
+- Versionsnummer er build-datoen plus et løbende nummer for dagen, `ÅÅÅÅ.M.D-N` (f.eks. `2026.12.1-1`, næste samme dag `2026.12.1-2`) i `package.json`. (Semver tillader ikke foranstillede nuller, så `-1` og ikke `-001`.) GitHub-tagget er `vÅÅÅÅ.M.D.N` (punktum, ikke bindestreg): AppImage og exe fra 2026.11.19–2026.11.25 splitter tagget kun på `.`, så `v2026.11.26-1` bliver læst som `2026.11.0` og ser ældre ud. Store-pakken bliver `ÅÅÅÅ.M.D.0`, så to udgivelser samme dag deler Store-versionen.
 - Ved udgivelse: opdatér `version` i `package.json`, `src-tauri/Cargo.toml`
   og `src-tauri/tauri.conf.json`, tilføj et afsnit til `CHANGELOG.md`
   (sektioner `### Features` og `### Fixes`), commit + push til `master`.

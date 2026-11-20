@@ -40,10 +40,18 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          if gh release view "v$VERSION" >/dev/null 2>&1; then
-            echo "Release v$VERSION already exists, skipping"
+          # Cargo needs 2026.11.26-1. Builds through 2026.11.25 split the tag on
+          # '.' only, so "26-1" parses as 0 and the release looks older than
+          # 2026.11.25. Publish v2026.11.26.1 instead.
+          TAG="v${VERSION/-/.}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG exists, uploading Linux assets"
+            gh release upload "$TAG" \
+              src-tauri/target/release/bundle/appimage/*.AppImage \
+              src-tauri/target/release/bundle/deb/*.deb \
+              --clobber
           else
-            gh release create "v$VERSION" \
+            gh release create "$TAG" \
               src-tauri/target/release/bundle/appimage/*.AppImage \
               src-tauri/target/release/bundle/deb/*.deb \
               --title "MDKnas $VERSION" --notes-file CHANGELOG.md --target "$GITHUB_SHA"
@@ -77,8 +85,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION=$(node -p "require('./package.json').version")
+          TAG="v${VERSION/-/.}"
           ZIP="MDKnas-$VERSION-win-x64.zip"
           powershell -Command "Compress-Archive -Path src-tauri/target/release/mdknas.exe -DestinationPath $ZIP"
-          gh release upload "v$VERSION" "$ZIP" msix-out/*.msix --clobber
+          gh release upload "$TAG" "$ZIP" msix-out/*.msix --clobber
           cp src-tauri/target/release/mdknas.exe MDKnas-win-x64.exe
-          gh release upload "v$VERSION" MDKnas-win-x64.exe --clobber
+          gh release upload "$TAG" MDKnas-win-x64.exe --clobber
