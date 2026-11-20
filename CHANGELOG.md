@@ -2,6 +2,11 @@
 
 Version numbers are the build date plus a running number for the day: `YYYY.M.D-N` (older releases are plain `YYYY.M.D`).
 
+## 2026.11.26-1
+
+### Fixes
+- Text typed after superscript, subscript, underline or highlight no longer inherits that formatting.
+
 ## 2026.11.25
 
 ### Features

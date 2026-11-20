@@ -209,6 +209,11 @@ describe('renderMarkdown', () => {
     expect(html).toContain('<span data-s="10" data-e="12"> c</span>');
   });
 
+  it('puts the gap of a closing inline tag outside the element', () => {
+    const html = renderMarkdown('x<sup>2</sup>y');
+    expect(html).toMatch(/<\/sup><span data-gap data-s="7" data-e="13">/);
+  });
+
   it('renders display math via katex', () => {
     const html = renderMarkdown('$$a+b$$');
     expect(html).toContain('<span class="math" data-s="0" data-e="7">');

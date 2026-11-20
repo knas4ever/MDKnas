@@ -303,9 +303,16 @@ function renderInline(tokens: Token[], ctx: InlineCtx): string {
       case 'html_inline': {
         ctx.hasRealContent = true;
         // Anchor the raw tag characters with a zero-width gap span so every
-        // source offset (e.g. the "<u>" of an underline) stays clickable.
-        ctx.out += gapSpan(ctx.pos, ctx.pos + t.content.length);
-        ctx.out += t.content;
+        // source offset (e.g. the "<u>" of an underline) stays clickable. The
+        // gap of a closing tag sits after it, outside the element, so a caret
+        // there types plain text instead of inheriting the formatting.
+        if (t.content.startsWith('</')) {
+          ctx.out += t.content;
+          ctx.out += gapSpan(ctx.pos, ctx.pos + t.content.length);
+        } else {
+          ctx.out += gapSpan(ctx.pos, ctx.pos + t.content.length);
+          ctx.out += t.content;
+        }
         ctx.pos += t.content.length;
         break;
       }
