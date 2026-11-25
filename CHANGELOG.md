@@ -2,7 +2,7 @@
 
 Version numbers are the build date plus a running number for the day: `YYYY.M.D-N` (older releases are plain `YYYY.M.D`).
 
-## 2026.11.26-2
+## 2026.11.27-1
 
 ### Features
 - New shortcuts: Ctrl+Shift+8 bullet list, Ctrl+Shift+9 task list (Ctrl+Shift+7 numbered list as before), Ctrl+Shift+T table, Ctrl+Shift+C code block, Ctrl+Shift+R raw Markdown source.
