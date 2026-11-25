@@ -443,9 +443,18 @@ export default function App() {
       } else if ((e.ctrlKey || e.metaKey) && key === 'n') {
         e.preventDefault();
         handleNew();
-      } else if ((e.ctrlKey || e.metaKey) && key === 'k') {
+      } else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && key === 'k') {
         e.preventDefault();
         handleLink();
+      } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === 'KeyT') {
+        e.preventDefault();
+        handleTable();
+      } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === 'KeyM') {
+        e.preventDefault();
+        handleImage();
+      } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === 'KeyR') {
+        e.preventDefault();
+        setSourceMode(m => !m);
       } else if ((e.ctrlKey || e.metaKey) && key === 'z') {
         e.preventDefault();
         e.shiftKey ? doRedo() : doUndo();
@@ -453,7 +462,7 @@ export default function App() {
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [handleSave, handleNew, handleLink, doUndo, doRedo]);
+  }, [handleSave, handleNew, handleLink, handleTable, handleImage, doUndo, doRedo]);
 
   useEffect(() => {
     return window.api.onMenu(a => {

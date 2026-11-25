@@ -77,6 +77,24 @@ describe('WysiwygEditor', () => {
     expect(box.innerHTML).toContain('<strong><span data-s="2" data-e="4">ab</span></strong>');
   });
 
+  it('heading, list and punctuation shortcuts work on layouts where e.key differs', () => {
+    const cases: Array<[KeyboardEventInit, string]> = [
+      [{ key: '2', code: 'Digit2', ctrlKey: true }, '<h2'],
+      [{ key: '"', code: 'Digit2', ctrlKey: true, shiftKey: true }, '<h2'],
+      [{ key: '8', code: 'Digit8', ctrlKey: true, shiftKey: true }, '<li'],
+      [{ key: 'Dead', code: 'Backquote', ctrlKey: true }, '<code']
+    ];
+    for (const [init, expected] of cases) {
+      const ref = React.createRef<WysiwygEditorHandle>();
+      const h = render(<Harness editorRef={ref} />);
+      const box = h.getByRole('textbox');
+      typeChar(box, 'a');
+      fireEvent.keyDown(box, init);
+      expect(box.innerHTML, JSON.stringify(init)).toContain(expected);
+      cleanup();
+    }
+  });
+
   it('enter at the end of a line creates a new line', () => {
     const ref = React.createRef<WysiwygEditorHandle>();
     const h = render(<Harness editorRef={ref} />);

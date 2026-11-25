@@ -523,18 +523,18 @@ fn build_menu(app: &AppHandle) -> tauri::Result<(Menu<Wry>, CheckMenuItem<Wry>)>
         &fmt("h5", "Heading 5", "CmdOrCtrl+5")?,
         &fmt("h6", "Heading 6", "CmdOrCtrl+6")?,
         &sep()?,
-        &fmt("ul", "Bullet List", "CmdOrCtrl+Shift+L")?,
-        &fmt("tasklist", "Task List", "CmdOrCtrl+Shift+T")?,
+        &fmt("ul", "Bullet List", "CmdOrCtrl+Shift+8")?,
+                &fmt("tasklist", "Task List", "CmdOrCtrl+Shift+9")?,
         &fmt("ol", "Numbered List", "CmdOrCtrl+Shift+7")?,
         &fmt("quote", "Quote", "CmdOrCtrl+Shift+Q")?,
         &sep()?,
         &fmt("link", "Link…", "CmdOrCtrl+K")?,
-        &fmt("image", "Image…", "CmdOrCtrl+Shift+M")?,
+        &it("fmt:image", "Image…", None)?,
         &fmt("hr", "Horizontal Rule", "CmdOrCtrl+Shift+D")?,
-        &fmt("codeblock", "Code Block", "CmdOrCtrl+Shift+K")?,
-        &fmt("table", "Table…", "CmdOrCtrl+Shift+G")?,
+        &fmt("codeblock", "Code Block", "CmdOrCtrl+Shift+C")?,
+        &it("fmt:table", "Table…", None)?,
     ])?;
-    let source = CheckMenuItem::with_id(app, "source", "Raw Markdown Source", true, false, Some("CmdOrCtrl+Shift+M"))?;
+    let source = CheckMenuItem::with_id(app, "source", "Raw Markdown Source", true, false, None::<&str>)?;
     let view = Submenu::with_items(app, "View", true, &[&source])?;
     let window = Submenu::with_items(app, "Window", true, &[
         &PredefinedMenuItem::minimize(app, None)?,

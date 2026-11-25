@@ -50,6 +50,15 @@ const SHORTCUTS_PLAIN: Record<string, EditorAction> = {
   '\\': 'clearFormat'
 };
 
+// Physical keys for the punctuation shortcuts, for layouts where the
+// character itself is a dead key or needs AltGr (e.g. Danish).
+const PUNCT_BY_CODE: Record<string, string> = {
+  Backquote: '`',
+  Period: '.',
+  Comma: ',',
+  Backslash: '\\'
+};
+
 const SHORTCUTS_SHIFT: Record<string, EditorAction> = {
   '1': 'h1',
   '2': 'h2',
@@ -58,13 +67,13 @@ const SHORTCUTS_SHIFT: Record<string, EditorAction> = {
   '5': 'h5',
   '6': 'h6',
   d: 'hr',
-  k: 'codeblock',
-  l: 'ul',
+  c: 'codeblock',
+  '8': 'ul',
   '7': 'ol',
+  '9': 'tasklist',
   q: 'quote',
   x: 'strikethrough',
-  h: 'highlight',
-  t: 'tasklist'
+  h: 'highlight'
 };
 
 function selectionForAction(content: string, sel: Selection): Selection {
@@ -1056,8 +1065,16 @@ export default forwardRef<WysiwygEditorHandle, Props>(function WysiwygEditor(
     if (composing.current) return;
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') verticalColumnRef.current = null;
     if (e.ctrlKey || e.metaKey) {
-      const k = e.key.toLowerCase();
-      const action = e.shiftKey ? SHORTCUTS_SHIFT[k] : SHORTCUTS_PLAIN[k];
+      // Digits come from e.code: with Shift (or on non-US layouts) e.key is
+      // a symbol such as "!" rather than "1".
+      const k = /^Digit[0-9]$/.test(e.code)
+        ? e.code.slice(5)
+        : e.key.toLowerCase();
+      const plain = (e.shiftKey ? undefined : SHORTCUTS_PLAIN[k]) ??
+        (e.shiftKey ? undefined : SHORTCUTS_PLAIN[PUNCT_BY_CODE[e.code]]);
+      const action = e.shiftKey
+        ? SHORTCUTS_SHIFT[k]
+        : plain ?? (/^[1-6]$/.test(k) ? SHORTCUTS_SHIFT[k] : undefined);
       if (action) {
         e.preventDefault();
         const sel = selectionForAction(content, effectiveSelection());

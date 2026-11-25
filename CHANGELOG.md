@@ -2,6 +2,17 @@
 
 Version numbers are the build date plus a running number for the day: `YYYY.M.D-N` (older releases are plain `YYYY.M.D`).
 
+## 2026.11.26-2
+
+### Features
+- New shortcuts: Ctrl+Shift+8 bullet list, Ctrl+Shift+9 task list (Ctrl+Shift+7 numbered list as before), Ctrl+Shift+T table, Ctrl+Shift+C code block, Ctrl+Shift+R raw Markdown source.
+
+### Fixes
+- Ctrl+1 to Ctrl+6 (headings) now work on Windows, and Ctrl+Shift+digit shortcuts work regardless of keyboard layout.
+- Ctrl+`, Ctrl+. , Ctrl+, and Ctrl+\ now work on layouts where the character needs a dead key or AltGr (e.g. Danish).
+- Ctrl+Shift+K no longer also triggers Ctrl+K (link).
+- Image and Raw Markdown Source no longer share Ctrl+Shift+M; Image and Table shortcuts work in the editor itself.
+
 ## 2026.11.26-1
 
 ### Fixes

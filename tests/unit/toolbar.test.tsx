@@ -21,9 +21,9 @@ describe('Toolbar', () => {
     render(<Toolbar {...props} onAction={onAction} />);
     fireEvent.click(screen.getByTitle('Bold (Ctrl+B)'));
     expect(onAction).toHaveBeenCalledWith('bold');
-    fireEvent.click(screen.getByTitle('Heading 1 (Ctrl+Shift+1)'));
+    fireEvent.click(screen.getByTitle('Heading 1 (Ctrl+1)'));
     expect(onAction).toHaveBeenCalledWith('h1');
-    fireEvent.click(screen.getByTitle('Task list (Ctrl+Shift+T)'));
+    fireEvent.click(screen.getByTitle('Task list (Ctrl+Shift+9)'));
     expect(onAction).toHaveBeenCalledWith('tasklist');
     fireEvent.click(screen.getByTitle('Highlight (Ctrl+Shift+H)'));
     expect(onAction).toHaveBeenCalledWith('highlight');

@@ -15,15 +15,15 @@ interface Props {
 const ACTIONS: Array<{ label: ReactNode; title: string; action: EditorAction }> = [
   { label: 'B', title: 'Bold (Ctrl+B)', action: 'bold' },
   { label: 'I', title: 'Italic (Ctrl+I)', action: 'italic' },
-  { label: 'H1', title: 'Heading 1 (Ctrl+Shift+1)', action: 'h1' },
-  { label: 'H2', title: 'Heading 2 (Ctrl+Shift+2)', action: 'h2' },
-  { label: 'H3', title: 'Heading 3 (Ctrl+Shift+3)', action: 'h3' },
+  { label: 'H1', title: 'Heading 1 (Ctrl+1)', action: 'h1' },
+  { label: 'H2', title: 'Heading 2 (Ctrl+2)', action: 'h2' },
+  { label: 'H3', title: 'Heading 3 (Ctrl+3)', action: 'h3' },
   { label: 'H4', title: 'Heading 4 (Ctrl+4)', action: 'h4' },
   { label: 'H5', title: 'Heading 5 (Ctrl+5)', action: 'h5' },
   { label: 'H6', title: 'Heading 6 (Ctrl+6)', action: 'h6' },
   { label: '¶', title: 'Paragraph / remove heading (Ctrl+0)', action: 'paragraph' },
-  { label: '•', title: 'Bullet list (Ctrl+Shift+L)', action: 'ul' },
-  { label: <input type="checkbox" checked readOnly tabIndex={-1} aria-hidden style={{ pointerEvents: 'none', margin: 0 }} />, title: 'Task list (Ctrl+Shift+T)', action: 'tasklist' },
+  { label: '•', title: 'Bullet list (Ctrl+Shift+8)', action: 'ul' },
+  { label: <input type="checkbox" checked readOnly tabIndex={-1} aria-hidden style={{ pointerEvents: 'none', margin: 0 }} />, title: 'Task list (Ctrl+Shift+9)', action: 'tasklist' },
   { label: '1.', title: 'Numbered list (Ctrl+Shift+7)', action: 'ol' },
   { label: '❝', title: 'Blockquote (Ctrl+Shift+Q)', action: 'quote' },
   { label: '</>', title: 'Inline code (Ctrl+`)', action: 'code' },
@@ -36,8 +36,8 @@ const ACTIONS: Array<{ label: ReactNode; title: string; action: EditorAction }> 
   { label: 'Link', title: 'Link (Ctrl+K)', action: 'link' },
   { label: 'Img', title: 'Image → assets folder… (Ctrl+Shift+M)', action: 'image' },
   { label: '―', title: 'Horizontal rule (Ctrl+Shift+D)', action: 'hr' },
-  { label: '```', title: 'Code block (Ctrl+Shift+K)', action: 'codeblock' },
-  { label: 'Table', title: 'Insert table… (Ctrl+Shift+G)', action: 'table' }
+  { label: '```', title: 'Code block (Ctrl+Shift+C)', action: 'codeblock' },
+  { label: 'Table', title: 'Insert table… (Ctrl+Shift+T)', action: 'table' }
 ];
 
 export default function Toolbar({
